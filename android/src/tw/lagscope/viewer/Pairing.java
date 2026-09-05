@@ -13,6 +13,19 @@ public final class Pairing {
     /** The port the desktop app serves the dashboard on by default. */
     public static final int DEFAULT_PORT = 23125;
 
+    /**
+     * The query parameter the desktop server reads the access code from.
+     *
+     * This has to be the name web.py checks, not a name that merely reads
+     * well. It was "code" here and "key" there, so filling the two fields on
+     * the pairing screen separately - the obvious thing to do, given how they
+     * are labelled - built a URL the server answered with 403 and the page
+     * rendered as "access code incorrect". Pasting the whole URL happened to
+     * work, which is why it survived: the one path that was documented was
+     * the one path that did not go through this.
+     */
+    public static final String QUERY_KEY = "key";
+
     private Pairing() { }
 
     /** Accepts a pasted dashboard URL as readily as a host and a code. */
@@ -26,10 +39,10 @@ public final class Pairing {
         // A pasted URL already carries everything, including its own code;
         // appending a second one would produce a request the server rejects.
         if (host.startsWith("http://") || host.startsWith("https://")) {
-            if (pin.isEmpty() || host.contains("code=")) {
+            if (pin.isEmpty() || host.contains(QUERY_KEY + "=")) {
                 return host;
             }
-            return host + (host.contains("?") ? "&" : "?") + "code=" + pin;
+            return host + (host.contains("?") ? "&" : "?") + QUERY_KEY + "=" + pin;
         }
 
         // A bare host, or host:port. Filling in the default port removes the
@@ -39,7 +52,7 @@ public final class Pairing {
         }
         String url = "http://" + host + "/";
         if (!pin.isEmpty()) {
-            url = url + "?code=" + pin;
+            url = url + "?" + QUERY_KEY + "=" + pin;
         }
         return url;
     }

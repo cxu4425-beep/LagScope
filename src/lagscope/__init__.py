@@ -8,7 +8,7 @@ to your screen (display).
 
 __all__ = ["__version__", "APP_NAME", "APP_ID", "REPO_URL", "LEGACY_APP_NAME", "LEGACY_APP_ID"]
 
-__version__ = "4.11.4"
+__version__ = "4.11.5"
 
 APP_NAME = "LagScope"
 APP_ID = "lagscope"

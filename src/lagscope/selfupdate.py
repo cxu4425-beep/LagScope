@@ -226,6 +226,38 @@ def _quietly_remove(path: str) -> None:
         pass
 
 
+# PyInstaller's onefile bootloader passes state to its own child through the
+# environment, and children inherit it. Anything we launch that is *itself* a
+# onefile build would read these and conclude it is such a child.
+PYI_ENVIRONMENT = ("_PYI_APPLICATION_HOME_DIR", "_PYI_ARCHIVE_FILE",
+                   "_PYI_PARENT_PROCESS_LEVEL", "_PYI_SPLASH_IPC",
+                   "_PYI_LINUX_PROCESS_NAME", "_MEIPASS2")
+
+
+def clean_environment(source=None) -> dict:
+    """The environment minus PyInstaller's private variables.
+
+    The installer inherits whatever we hand it, and then hands that on to the
+    copy of the app it launches from its "run now" checkbox. With
+    _PYI_PARENT_PROCESS_LEVEL still set, that fresh app decides it must be a
+    onefile child process and checks that its parent runs the same executable.
+    Its parent is the installer, so it does not - and the app that has just
+    finished installing opens with "Security validation failure: parent
+    process has different executable!" instead.
+
+    Starting it from the Start menu works, because Explorer's environment
+    never had these in it. This makes the installer's environment look the
+    same way.
+    """
+    environment = dict(os.environ if source is None else source)
+    for name in PYI_ENVIRONMENT:
+        environment.pop(name, None)
+    # A future bootloader may add more; the prefix is the contract.
+    for name in [key for key in environment if key.startswith("_PYI_")]:
+        environment.pop(name, None)
+    return environment
+
+
 def launch_installer(path: str, silent: bool = False) -> bool:
     """Start the downloaded installer and return, so the caller can quit.
 
@@ -241,13 +273,16 @@ def launch_installer(path: str, silent: bool = False) -> bool:
     # /NORESTARTAPPLICATIONS, not /RESTARTAPPLICATIONS: Restart Manager would
     # relaunch the onefile *child* process, which then fails PyInstaller's
     # parent-executable check and shows a security error instead of the app.
-    # The installer's own "run now" step brings it back correctly.
+    # The installer's own "run now" step brings it back - and only does so
+    # correctly because of the scrubbed environment below, which the same
+    # check would otherwise trip over for a different reason.
     arguments += ["/NORESTART", "/NORESTARTAPPLICATIONS"]
     try:
         creationflags = 0
         if sys.platform.startswith("win"):
             creationflags = getattr(subprocess, "DETACHED_PROCESS", 0)
-        subprocess.Popen(arguments, close_fds=True, creationflags=creationflags)
+        subprocess.Popen(arguments, close_fds=True, creationflags=creationflags,
+                         env=clean_environment())
         return True
     except (OSError, ValueError) as exc:
         LOG.warning("could not start the installer: %s", exc)

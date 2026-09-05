@@ -91,9 +91,16 @@ def local_addresses() -> list:
     return found
 
 
+# The query parameter the access code arrives in. The Android viewer builds
+# its URL with the same name (Pairing.QUERY_KEY) and a test asserts the two
+# agree - they disagreed once, and neither side's own tests could tell,
+# because each was perfectly consistent with itself.
+ACCESS_QUERY = "key"
+
+
 def dashboard_urls(port: int, code: str = "") -> list:
     """The addresses to type into a phone browser."""
-    suffix = f"/?key={code}" if code else "/"
+    suffix = f"/?{ACCESS_QUERY}={code}" if code else "/"
     return [f"http://{address}:{port}{suffix}" for address in local_addresses()]
 
 
@@ -252,7 +259,7 @@ def _make_handler(snapshot: _Snapshot, access_code: str):
         def _authorised(self, query: dict) -> bool:
             if not access_code:
                 return True
-            return (query.get("key") or [""])[0] == access_code
+            return (query.get(ACCESS_QUERY) or [""])[0] == access_code
 
         def _send(self, status: int, body: bytes, content_type: str) -> None:
             self.send_response(status)

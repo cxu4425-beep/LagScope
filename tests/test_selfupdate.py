@@ -239,3 +239,64 @@ def test_the_installer_script_does_not_restart_applications_either():
     script = pathlib.Path("packaging/installer.iss").read_text(encoding="utf-8")
     directives = re.findall(r"^RestartApplications=(\w+)", script, re.MULTILINE)
     assert directives == ["no"], directives
+
+
+# ------------------------------------ the environment handed to the installer
+def test_pyinstaller_variables_never_reach_the_installer():
+    """The installer passes its environment on to the copy of the app it
+    launches from "run now". With _PYI_PARENT_PROCESS_LEVEL still set, that
+    app decides it is a onefile child and checks that its parent runs the same
+    executable - its parent is the installer, so it does not, and the app that
+    just finished installing opens with a security error instead."""
+    from lagscope.selfupdate import clean_environment
+
+    source = {
+        "PATH": "/usr/bin",
+        "APPDATA": r"C:\Users\someone\AppData\Roaming",
+        "_PYI_PARENT_PROCESS_LEVEL": "0",
+        "_PYI_ARCHIVE_FILE": r"C:\Program Files\LagScope\LagScope.exe",
+        "_PYI_APPLICATION_HOME_DIR": r"C:\Temp\_MEI123",
+        "_MEIPASS2": r"C:\Temp\_MEI123",
+    }
+    out = clean_environment(source)
+
+    assert not [key for key in out if key.startswith("_PYI_")]
+    assert "_MEIPASS2" not in out
+    # everything the installer legitimately needs survives
+    assert out["PATH"] == "/usr/bin"
+    assert out["APPDATA"] == source["APPDATA"]
+
+
+def test_a_variable_a_future_bootloader_adds_is_dropped_too():
+    """The names are a moving target; the prefix is the contract."""
+    from lagscope.selfupdate import clean_environment
+
+    assert "_PYI_SOMETHING_NEW" not in clean_environment({"_PYI_SOMETHING_NEW": "1"})
+
+
+def test_the_installer_is_started_with_the_scrubbed_environment(monkeypatch, tmp_path):
+    """Not just that clean_environment is right, but that Popen is given it -
+    the previous bug was a missing argument, not a wrong function."""
+    import subprocess as sp
+
+    from lagscope import selfupdate
+
+    installer = tmp_path / "LagScope-setup.exe"
+    installer.write_bytes(b"MZ")
+    seen = {}
+
+    def fake_popen(args, **kwargs):
+        seen["args"] = args
+        seen["env"] = kwargs.get("env")
+        return object()
+
+    monkeypatch.setattr(selfupdate.os, "environ",
+                        {"PATH": "/usr/bin", "_PYI_PARENT_PROCESS_LEVEL": "0"})
+    monkeypatch.setattr(sp, "Popen", fake_popen)
+
+    assert selfupdate.launch_installer(str(installer)) is True
+
+    assert seen["env"] is not None, "Popen was called without env="
+    assert "_PYI_PARENT_PROCESS_LEVEL" not in seen["env"]
+    assert seen["env"]["PATH"] == "/usr/bin"
+    assert "/NORESTARTAPPLICATIONS" in seen["args"]
