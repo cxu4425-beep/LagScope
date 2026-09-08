@@ -277,6 +277,62 @@ def check_cdn(result: CheckResult, stream, room: str) -> None:
                    "difference was below the switching threshold")
 
 
+def check_wireless(result: CheckResult) -> None:
+    """What the Wi-Fi reading actually got, or why it got nothing.
+
+    This failed silently on a real machine for two days: the history recorded
+    no wireless at all and the report concluded the connection was wired, on a
+    laptop that has never been plugged in. Nothing anywhere said so. The
+    reading is best-effort by design, but "best effort" has to be visible when
+    it comes back empty, or it is indistinguishable from having no Wi-Fi.
+
+    The network's name is never printed - the report says it carries no Wi-Fi
+    name and that has to stay true - so what is shown is which labels the
+    tool's output contained, which is what a parsing failure looks like.
+    """
+    from .probes.path import _run, parse_wifi, wifi_info
+
+    info = wifi_info()
+    if info is not None:
+        result.add(f"signal: {info.signal_pct if info.signal_pct is not None else '?'}%"
+                   f"   band: {info.resolved_band() or 'unknown'}"
+                   f"   radio: {info.radio or '?'}")
+        result.add(f"channel: {info.channel or '?'}   "
+                   f"access point: {'yes' if info.bssid else 'not read'}")
+        result.add("network name: read, and deliberately not printed here")
+        if not info.resolved_band():
+            result.status = WARN
+            result.add("the band could not be established, so links cannot be "
+                       "told apart by it")
+        return
+
+    # Nothing came back. Say what the tool actually produced, without the
+    # values - the labels alone show whether it answered and whether the
+    # parsing understood it.
+    result.status = WARN
+    result.add("no wireless reading - this machine will look wired in reports")
+    if sys.platform.startswith("win"):
+        raw = _run(["netsh", "wlan", "show", "interfaces"], 6.0)
+    elif sys.platform == "darwin":
+        raw = _run(["/System/Library/PrivateFrameworks/Apple80211.framework/"
+                    "Versions/Current/Resources/airport", "-I"], 6.0)
+    else:
+        raw = _run(["iw", "dev"], 4.0)
+
+    if raw is None:
+        result.add("the tool could not be run at all")
+        return
+    if not raw.strip():
+        result.add("the tool ran but printed nothing")
+        return
+    labels = [line.split(":", 1)[0].strip() for line in raw.splitlines()
+              if ":" in line and line.split(":", 1)[0].strip()]
+    result.add(f"the tool printed {len(raw.splitlines())} line(s)")
+    result.add("labels seen: " + (", ".join(labels[:14]) or "(none)"))
+    result.add("if a label above is the local word for signal or channel and "
+               "the reading still failed, that is the bug - send this list")
+
+
 def check_path_tools(result: CheckResult) -> None:
     """Whether the OS tools the network check shells out to are usable."""
     from .probes.path import default_gateway, ping_stats
@@ -361,6 +417,7 @@ def run(config, room: str = "", timeout_s: float = 6.0) -> List[CheckResult]:
         client.close()
 
     results.append(_check("path tools (ping / gateway)", check_path_tools))
+    results.append(_check("wireless", check_wireless))
     results.append(_check("application connections", check_apps))
     results.append(_check("config folder and report", check_writable))
     return results

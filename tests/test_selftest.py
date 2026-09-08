@@ -198,3 +198,63 @@ def test_the_config_folder_line_itself_is_redacted(monkeypatch, tmp_path):
     assert result.status == OK
     assert any("config folder:" in line for line in result.lines)
     assert not any("cxu44" in line for line in result.lines), result.lines
+
+
+def test_a_missing_wireless_reading_is_reported_not_swallowed(monkeypatch):
+    """It failed silently on a real machine for two days: the history recorded
+    no wireless, the report said the connection was probably wired, and the
+    laptop had never been plugged in. Nothing said so anywhere."""
+    from lagscope.probes import path as path_module
+
+    monkeypatch.setattr(path_module, "wifi_info", lambda: None)
+    monkeypatch.setattr(path_module, "_run", lambda cmd, t: "")
+
+    result = _check("wireless", selftest.check_wireless)
+
+    assert result.status == WARN
+    assert any("no wireless reading" in line for line in result.lines)
+
+
+def test_the_labels_are_shown_so_a_parsing_failure_is_diagnosable(monkeypatch):
+    from lagscope.probes import path as path_module
+
+    monkeypatch.setattr(path_module, "wifi_info", lambda: None)
+    monkeypatch.setattr(path_module, "_run", lambda cmd, t: (
+        "    Name                   : Wi-Fi\n"
+        "    SSID                   : PrivateNetworkName\n"
+        "    Signal                 : 99%\n"))
+
+    result = _check("wireless", selftest.check_wireless)
+    body = " ".join(result.lines)
+
+    assert "SSID" in body and "Signal" in body      # the labels are useful
+    assert "PrivateNetworkName" not in body         # the values are not shown
+
+
+def test_a_working_reading_never_prints_the_network_name(monkeypatch):
+    """The report ends by promising it carries no Wi-Fi name."""
+    from lagscope.probes import path as path_module
+    from lagscope.probes.path import WifiInfo
+
+    monkeypatch.setattr(path_module, "wifi_info",
+                        lambda: WifiInfo(ssid="PrivateNetworkName", signal_pct=88,
+                                         radio="802.11ax", channel="36", band="5"))
+
+    result = _check("wireless", selftest.check_wireless)
+    body = " ".join(result.lines)
+
+    assert result.status == OK
+    assert "88" in body and "802.11ax" in body
+    assert "PrivateNetworkName" not in body
+
+
+def test_a_band_that_could_not_be_established_is_flagged(monkeypatch):
+    from lagscope.probes import path as path_module
+    from lagscope.probes.path import WifiInfo
+
+    monkeypatch.setattr(path_module, "wifi_info",
+                        lambda: WifiInfo(ssid="Net", signal_pct=88, channel="200"))
+
+    result = _check("wireless", selftest.check_wireless)
+    assert result.status == WARN
+    assert any("band" in line for line in result.lines)

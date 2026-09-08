@@ -329,3 +329,38 @@ def test_a_real_unreachable_target_is_still_distinguished():
         target_stats=PingStats(host="8.8.8.8", sent=5, received=0, error="no reply"),
     )
     assert verdict(report)[0] == "verdict.target_down"
+
+
+def test_console_output_is_decoded_without_ever_raising():
+    """subprocess text=True raised UnicodeDecodeError on output it could not
+    decode - and that is neither an OSError nor a SubprocessError, so it went
+    straight past the handler and was swallowed several frames up as "wifi
+    state unavailable". The reading vanished with no error anywhere."""
+    from lagscope.probes.path import _decode
+
+    assert _decode("SSID : Home\n".encode("utf-8")).startswith("SSID")
+    # Bytes that are not valid UTF-8 must still come back as something.
+    assert _decode("訊號 : 99%".encode("cp950"))
+    assert _decode(b"\xff\xfe\x00\x01") is not None
+
+
+def test_ascii_survives_even_when_the_labels_do_not():
+    """A network name, an address or a percentage is ASCII, so it stays
+    readable however badly the surrounding words decode."""
+    from lagscope.probes.path import _decode, parse_wifi
+
+    raw = ("    SSID                   : MyNetwork\n"
+           "    訊號                   : 99%\n").encode("cp950")
+    info = parse_wifi(_decode(raw), "win32")
+    assert info.ssid == "MyNetwork"
+
+
+def test_the_channel_label_covers_both_chinese_windows():
+    """Windows says 通道 in Traditional Chinese and 信道 in Simplified. 頻道 is
+    the word for a television channel and was never one of them."""
+    from lagscope.probes.path import parse_wifi
+
+    for label in ("Channel", "通道", "信道"):
+        info = parse_wifi(f"    SSID : Net\n    {label} : 36\n", "win32")
+        assert info.channel == "36", label
+        assert info.band == "5", label

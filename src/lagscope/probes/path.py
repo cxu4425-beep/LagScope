@@ -18,6 +18,7 @@ in English, Chinese or anything else.
 from __future__ import annotations
 
 import ipaddress
+import locale
 import logging
 import re
 import socket
@@ -208,17 +209,57 @@ class PathReport:
 
 
 # --------------------------------------------------------------------- ping
+def _console_encodings() -> list:
+    """Encodings to try for a Windows command-line tool's output, best first.
+
+    Console tools write in the OEM code page, which is not the one
+    ``text=True`` would pick, and on a Chinese Windows the two can differ.
+    Getting it wrong used to raise UnicodeDecodeError - which is neither an
+    OSError nor a SubprocessError, so it went straight past the handler below
+    and was swallowed several frames up as "wifi state unavailable". The
+    reading simply vanished, with no error anywhere.
+    """
+    names = []
+    if sys.platform.startswith("win"):
+        try:
+            import ctypes
+
+            names.append("cp%d" % ctypes.windll.kernel32.GetOEMCP())
+            names.append("cp%d" % ctypes.windll.kernel32.GetACP())
+        except Exception:
+            pass
+    names.append(locale.getpreferredencoding(False))
+    names.append("utf-8")
+    # Never fails, and leaves the ASCII - addresses, numbers, "SSID" - intact
+    # even when the labels around them come out as nonsense.
+    names.append("latin-1")
+    seen = []
+    for name in names:
+        if name and name not in seen:
+            seen.append(name)
+    return seen
+
+
+def _decode(raw: bytes) -> str:
+    for encoding in _console_encodings():
+        try:
+            return raw.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return raw.decode("latin-1", "replace")
+
+
 def _run(command: list, timeout_s: float) -> Optional[str]:
     try:
         completed = subprocess.run(
-            command, capture_output=True, text=True, timeout=timeout_s,
+            command, capture_output=True, timeout=timeout_s,
             creationflags=_NO_WINDOW,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         LOG.debug("%s failed: %s", command[0], exc)
         return None
     # A partial answer is still useful: ping exits non-zero on any loss.
-    return (completed.stdout or "") + (completed.stderr or "")
+    return _decode((completed.stdout or b"") + (completed.stderr or b""))
 
 
 def parse_ping_times(output: str) -> list:
@@ -418,7 +459,9 @@ def parse_wifi(output: str, platform: str = "") -> Optional[WifiInfo]:
         # "BSSID" also contains "ssid"; a MAC address is not a network name.
         if re.fullmatch(r"(?:[0-9a-f]{2}:){5}[0-9a-f]{2}", ssid.lower()):
             ssid = ""
-        channel = field_value("channel", "信道", "頻道")
+        # Windows says 通道 in Traditional Chinese and 信道 in Simplified;
+        # 頻道 is the word for a television channel and was never right.
+        channel = field_value("channel", "通道", "信道", "频道", "頻道")
         # Windows 11 states the band outright. Prefer it: 6 GHz reuses the low
         # channel numbers, so inferring from the channel can be wrong there.
         band = normalise_band(field_value("band", "频带", "頻帶"))
