@@ -606,6 +606,7 @@ class MonitorApplication(QObject):
             auto_findings=context["auto_findings"], switches=context["switches"],
             comparisons=context["comparisons"], speed=context["speed"],
             edges=context["edges"], edge_note=context["edge_note"],
+            edges_comparable=context["edges_comparable"],
             links=context["links"], link_note=context["link_note"],
             signals=context["signals"], signal_note=context["signal_note"],
             pattern_note=context["pattern_note"], actions=context["actions"],
@@ -827,18 +828,28 @@ class MonitorApplication(QObject):
         """Which edges served you, when it was bad, and what to try about it."""
         from .actions import suggest
         from .patterns import (by_edge, by_link, by_period, by_signal,
-                               edge_verdict, hour_ranges, signal_note_key)
+                               edge_verdict, edges_are_comparable, hour_ranges,
+                               signal_note_key)
         from .probes.cdninfo import describe
 
         buckets = self._history.buckets(hours)
         edges = by_edge(buckets)
-        verdict = edge_verdict(edges)
+        # Watching an application, the hosts are whatever it talked to - not
+        # alternatives to one another. Ranking them and advising a reassignment
+        # would be advice about a choice nobody has.
+        comparable = edges_are_comparable(buckets)
+        verdict = edge_verdict(edges) if comparable else None
 
         note = ""
-        if verdict.key == "edge.differs" and verdict.worst and verdict.best:
+        if not comparable:
+            # With one host there is nothing anyone would have tried to
+            # compare, so the explanation would be answering an unasked
+            # question.
+            note = tr("edge.not_comparable") if len(edges) > 1 else ""
+        elif verdict.key == "edge.differs" and verdict.worst and verdict.best:
             note = tr("edge.differs", worst=verdict.worst.host, best=verdict.best.host,
                       diff=f"{verdict.difference_ms:.0f}", share=f"{verdict.worst.share_pct:.0f}")
-        elif verdict.key:
+        elif verdict is not None and verdict.key:
             note = tr(verdict.key)
 
         # The same comparison for the wireless network. Separate from the edge
@@ -894,13 +905,14 @@ class MonitorApplication(QObject):
         return {
             "edges": edges,
             "edge_note": note,
+            "edges_comparable": comparable,
             "links": links,
             "link_note": link_note,
             "signals": signals,
             "signal_note": signal_note,
             "pattern_note": pattern_note,
             "actions": suggest(
-                edge_verdict=verdict,
+                edge_verdict=verdict,   # None when they are not alternatives
                 pattern=pattern,
                 verdict_key=verdict_key,
                 peer_hosts=[stats.host for stats in edges
@@ -1272,7 +1284,13 @@ class MonitorApplication(QObject):
             self._room_title = ""
         elif target.kind == KIND_VIDEO:
             self._room_title = f"{tr('label.video')} {target.title or target.ident}"
+        elif target.kind == KIND_APP:
+            self._room_title = f"{tr('label.app')} {target.ident}"
+        elif target.kind == KIND_TARGET:
+            self._room_title = f"{tr('label.target')} {target.ident}"
         else:
+            # Only a live stream has a room; the branch used to say "Room
+            # LagScope.exe", which is three kinds of wrong at once.
             self._room_title = f"{tr('label.room')} {target.ident}"
         self._overlay.set_room_label(self._room_title)
 

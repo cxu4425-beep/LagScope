@@ -111,6 +111,27 @@ def _group_by(buckets: Sequence, field: str) -> List[EdgeStats]:
     return out
 
 
+def edges_are_comparable(buckets: Sequence) -> bool:
+    """Whether the recorded hosts are alternatives to one another.
+
+    Watching a live stream, every host in the list serves the *same* stream, so
+    comparing them is fair and "you were handed the slow one" is actionable.
+    Watching an application, they are whatever that program talked to - a real
+    report listed GitHub, Akamai and Bilibili side by side and concluded the
+    machine had been assigned a slow edge, then advised reopening the player to
+    be reassigned. Nothing about that is true: they are different services, and
+    a slow one is not a substitute for a fast one.
+
+    So the comparison is only offered where the hosts are interchangeable.
+    Minutes with no kind recorded predate the field and are assumed to be the
+    live monitoring they could only have come from.
+    """
+    from .models import KIND_LIVE, KIND_VIDEO
+
+    kinds = {getattr(bucket, "kind", "") or KIND_LIVE for bucket in buckets or ()}
+    return bool(kinds) and kinds <= {KIND_LIVE, KIND_VIDEO}
+
+
 def by_edge(buckets: Sequence) -> List[EdgeStats]:
     """Which CDN edge served each minute."""
     return _group_by(buckets, "host")

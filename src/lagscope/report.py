@@ -29,7 +29,7 @@ from .config import app_config_dir
 from .history import Bucket
 from .i18n import tr
 from .actions import has_local_cause
-from .probes.cdninfo import summary as cdn_summary
+from .probes.cdninfo import detail as cdn_summary
 from .probes.speed import tier_key
 from .textfmt import pad as text_pad, width as text_width
 from .ui.theme import format_mbps, format_ms
@@ -401,6 +401,7 @@ def build_html(*, buckets: Sequence[Bucket], summary: dict, bucket_s: float = 60
                auto_findings: Sequence = (), switches: Sequence = (),
                comparisons: Sequence = (), speed=None,
                edges: Sequence = (), edge_note: str = "", pattern_note: str = "",
+               edges_comparable: bool = True,
                links: Sequence = (), link_note: str = "",
                signals: Sequence = (), signal_note: str = "",
                actions: Sequence = (),
@@ -527,7 +528,9 @@ def build_html(*, buckets: Sequence[Bucket], summary: dict, bucket_s: float = 60
         )
 
     if edges:
-        body.append(f"<h2>{esc(tr('edge.title'))}</h2>")
+        body.append("<h2>"
+                    f"{esc(tr('edge.title' if edges_comparable else 'edge.title_hosts'))}"
+                    "</h2>")
         rows = "".join(
             f"<tr><td>{esc(stats.host)}<div class='sub'>{esc(cdn_summary(stats.host))}</div></td>"
             f"<td>{esc(format_ms(stats.avg_ms))}</td>"
@@ -651,6 +654,7 @@ def build_text(*, summary: dict, worst: Optional[dict] = None, path_report=None,
                target_label: str = "", auto_findings: Sequence = (),
                switches: Sequence = (), comparisons: Sequence = (), speed=None,
                edges: Sequence = (), edge_note: str = "", pattern_note: str = "",
+               edges_comparable: bool = True,
                links: Sequence = (), link_note: str = "",
                signals: Sequence = (), signal_note: str = "",
                actions: Sequence = ()) -> str:
@@ -695,10 +699,13 @@ def build_text(*, summary: dict, worst: Optional[dict] = None, path_report=None,
 
     if edges:
         lines.append("")
-        lines.append(f"{tr('edge.title')}:")
+        lines.append(f"{tr('edge.title' if edges_comparable else 'edge.title_hosts')}:")
         for stats in edges:
-            lines.append(f"  {_pad(stats.host, 34)} {format_ms(stats.avg_ms):>9}"
-                         f"   {stats.share_pct:4.0f}%   {cdn_summary(stats.host)}")
+            # rstrip: the description column is empty for a raw address, and
+            # a line of trailing spaces is a thing people paste into forums.
+            lines.append((f"  {_pad(stats.host, 34)} {format_ms(stats.avg_ms):>9}"
+                          f"   {stats.share_pct:4.0f}%   "
+                          f"{cdn_summary(stats.host)}").rstrip())
         if edge_note:
             lines.append(f"  {edge_note}")
 

@@ -236,3 +236,61 @@ def test_the_chart_does_not_depend_on_the_order_buckets_arrive_in():
 
     assert chart_svg(ordered, 60.0, None, None, []) == \
         chart_svg(shuffled, 60.0, None, None, [])
+
+
+# ------------------- hosts that are not alternatives to one another
+def test_edges_are_only_comparable_for_a_stream():
+    """Watching a live stream, every host serves the same stream, so ranking
+    them is fair. Watching an application they are whatever it talked to - a
+    real report put GitHub, Akamai and Bilibili in one table and concluded the
+    machine had been assigned a slow edge, then advised reopening the player."""
+    from lagscope.history import Bucket
+    from lagscope.models import KIND_APP, KIND_LIVE, KIND_TARGET, KIND_VIDEO
+    from lagscope.patterns import edges_are_comparable
+
+    def minutes(kind):
+        return [Bucket(start=1000.0 + i * 60, count=30, ok=30, avg_ms=1800.0,
+                       kind=kind, host="h") for i in range(5)]
+
+    assert edges_are_comparable(minutes(KIND_LIVE))
+    assert edges_are_comparable(minutes(KIND_VIDEO))
+    assert not edges_are_comparable(minutes(KIND_APP))
+    assert not edges_are_comparable(minutes(KIND_TARGET))
+    # a window spanning both cannot be compared either
+    assert not edges_are_comparable(minutes(KIND_LIVE) + minutes(KIND_APP))
+    assert not edges_are_comparable([])
+
+
+def test_history_written_before_kind_was_recorded_is_treated_as_live():
+    """It could only have come from the live monitoring that existed then."""
+    from lagscope.history import Bucket
+    from lagscope.patterns import edges_are_comparable
+
+    assert edges_are_comparable([Bucket(start=1000.0, count=1, ok=1, avg_ms=1.0)])
+
+
+def test_the_heading_says_servers_not_edges_when_they_are_not_alternatives():
+    from lagscope.report import build_text
+
+    stats = [_EdgeRow("a.example", 50.0), _EdgeRow("b.example", 250.0)]
+    assert tr("edge.title") in build_text(summary={"hours": 24}, edges=stats)
+    assert tr("edge.title_hosts") in build_text(
+        summary={"hours": 24}, edges=stats, edges_comparable=False)
+
+
+def test_a_raw_address_is_not_printed_twice():
+    """summary() falls back to the bare host so a caller always has something.
+    The table already shows the host, so the next column printed it again for
+    every IP address in a real report."""
+    from lagscope.probes.cdninfo import detail, summary
+
+    assert summary("23.210.237.156:443") == "23.210.237.156:443"
+    assert detail("23.210.237.156:443") == ""
+    assert detail("cn-hbyc-ct-01.bilivideo.com")           # still says what it can
+
+
+class _EdgeRow:
+    def __init__(self, host, avg):
+        self.host, self.avg_ms = host, avg
+        self.share_pct, self.stalls, self.buckets = 50.0, 0, 20
+        self.signal_pct, self.roams, self.samples, self.ok = None, 0, 600, 600

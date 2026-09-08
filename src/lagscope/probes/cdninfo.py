@@ -273,3 +273,15 @@ def locate_line(host: str, rtt_ms=None, rtt_to_edge: bool = False) -> str:
     # server" - dropping it to show a distance alone would remove the only
     # part the reader can look up.
     return f"{where} \u00b7 {ceiling}" if where else ceiling
+
+
+def detail(host: str) -> str:
+    """What can be said about a host beyond its own name - or nothing.
+
+    ``summary`` falls back to the bare hostname so a caller always has
+    something to print. A table that already shows the host in one column and
+    calls this for the next then prints it twice, which is what a real report
+    did for every raw IP address it had measured.
+    """
+    described = summary(host)
+    return "" if described == host else described

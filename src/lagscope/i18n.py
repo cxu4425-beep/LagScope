@@ -831,6 +831,16 @@ STRINGS: dict[str, tuple[str, str, str]] = {
         "Not enough recorded yet to compare edges (each needs at least ten minutes).",
     ),
     "edge.none": ("没有节点资讯", "沒有節點資訊", "No edge recorded"),
+    "edge.title_hosts": ("它连过哪些伺服器", "它連過哪些伺服器", "Servers it talked to"),
+    "edge.not_comparable": (
+        "这些是各自不同的服务，不是同一份内容的替代节点，所以不能拿来互相比较——"
+        "慢的那台不是快的那台的替代品。上面的数字只说明各自多远、多快。",
+        "這些是各自不同的服務，不是同一份內容的替代節點，所以不能拿來互相比較——"
+        "慢的那台不是快的那台的替代品。上面的數字只說明各自多遠、多快。",
+        "These are separate services, not alternative edges for the same content, so they "
+        "cannot be compared with each other - the slow one is not a substitute for the fast "
+        "one. The numbers above say only how far and how fast each of them is.",
+    ),
 
     # -- which wireless network carried it -------------------------------
     "link.title": ("你用了哪些无线网路", "你用了哪些無線網路", "Which wireless links you used"),

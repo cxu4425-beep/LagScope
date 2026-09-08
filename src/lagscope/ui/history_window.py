@@ -322,7 +322,7 @@ def analysis_html(context: dict) -> str:
     from html import escape
 
     from ..actions import has_local_cause
-    from ..probes.cdninfo import summary as cdn_summary
+    from ..probes.cdninfo import detail as cdn_summary
 
     parts: List[str] = []
 
@@ -340,6 +340,10 @@ def analysis_html(context: dict) -> str:
             parts.append(f"<p>{escape(tr('action.not_yours'))}</p>")
 
     edges = context.get("edges") or ()
+    # Watching an application these are separate services, not alternatives,
+    # so the heading must not call them edges you were assigned.
+    edge_heading = tr("edge.title" if context.get("edges_comparable", True)
+                      else "edge.title_hosts")
     if edges:
         rows = "".join(
             f"<tr><td>{escape(item.host)}<br>"
@@ -350,7 +354,7 @@ def analysis_html(context: dict) -> str:
             for item in edges
         )
         parts.append(
-            f"<b>{escape(tr('edge.title'))}</b>"
+            f"<b>{escape(edge_heading)}</b>"
             f"<table width='100%' cellspacing='0' cellpadding='3'><tr>"
             f"<th align='left'>{escape(tr('edge.col_host'))}</th>"
             f"<th align='right'>{escape(tr('edge.col_avg'))}</th>"
