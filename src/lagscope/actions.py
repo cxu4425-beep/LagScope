@@ -56,7 +56,8 @@ def suggest(*, edge_verdict=None, pattern=None, verdict_key: str = "",
             peer_hosts: Sequence = (), loss_pct: Optional[float] = None,
             speed_mbps: Optional[float] = None,
             switches: int = 0, link_verdict=None, roams: int = 0,
-            band: str = "", bluetooth_ms: float = 0.0) -> List[Action]:
+            band: str = "", bluetooth_ms: float = 0.0,
+            signal_verdict=None) -> List[Action]:
     """Build the ordered list from what was actually measured.
 
     Everything is optional: the caller passes what it has, and an absent
@@ -90,6 +91,17 @@ def suggest(*, edge_verdict=None, pattern=None, verdict_key: str = "",
             priority=PRIORITY_STRONG,
             detail=(f"{worst.host} \u2192 {best.host} "
                     f"(+{link_verdict.difference_ms:.0f} ms)") if worst and best else "",
+        ))
+
+    # --- a weak signal is the commonest wireless fault and the only one most
+    # --- people can compare, because most homes have exactly one network
+    if signal_verdict is not None and getattr(signal_verdict, "matters", False):
+        worst = getattr(signal_verdict, "worst", None)
+        out.append(Action(
+            key="action.signal", because_key="action.because.signal",
+            priority=PRIORITY_STRONG,
+            detail=(f"+{signal_verdict.difference_ms:.0f} ms, "
+                    f"{worst.share_pct:.0f}%") if worst else "",
         ))
 
     # --- the access point changing under you is a stall with no other cause
@@ -157,5 +169,5 @@ def has_local_cause(actions: Sequence) -> bool:
     """
     local = {"action.wifi", "action.home", "action.dns", "action.lower_quality",
              "action.peer_node", "action.edge_reassign", "action.switch_band",
-             "action.roaming", "action.bt_interference"}
+             "action.roaming", "action.bt_interference", "action.signal"}
     return any(getattr(action, "key", "") in local for action in actions or ())

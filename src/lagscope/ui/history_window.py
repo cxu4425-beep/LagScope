@@ -386,6 +386,32 @@ def analysis_html(context: dict) -> str:
         )
     if context.get("link_note"):
         parts.append(f"<p>{escape(context['link_note'])}</p>")
+
+    # Strong versus weak signal. The label is stored as an i18n key, the way an
+    # edge stores a hostname - what to call it is decided here, not there.
+    signals = context.get("signals") or ()
+    if len(signals) > 1:
+        rows = "".join(
+            f"<tr><td>{escape(tr(item.host))}</td>"
+            f"<td align='right'>&nbsp;{escape(format_ms(item.avg_ms))}</td>"
+            f"<td align='right'>&nbsp;"
+            f"{'--' if item.signal_pct is None else f'{item.signal_pct:.0f}%'}</td>"
+            f"<td align='right'>&nbsp;{item.share_pct:.0f}%</td>"
+            f"<td align='right'>&nbsp;{item.stalls}</td></tr>"
+            for item in signals
+        )
+        parts.append(
+            f"<b>{escape(tr('signal.title'))}</b>"
+            f"<table width='100%' cellspacing='0' cellpadding='3'><tr>"
+            f"<th align='left'>{escape(tr('signal.col_when'))}</th>"
+            f"<th align='right'>{escape(tr('edge.col_avg'))}</th>"
+            f"<th align='right'>{escape(tr('link.col_signal'))}</th>"
+            f"<th align='right'>{escape(tr('edge.col_share'))}</th>"
+            f"<th align='right'>{escape(tr('edge.col_stalls'))}</th>"
+            f"</tr>{rows}</table>"
+        )
+    if context.get("signal_note"):
+        parts.append(f"<p>{escape(context['signal_note'])}</p>")
     if context.get("pattern_note"):
         parts.append(f"<p><b>{escape(tr('pattern.title'))}</b><br>"
                      f"{escape(context['pattern_note'])}</p>")

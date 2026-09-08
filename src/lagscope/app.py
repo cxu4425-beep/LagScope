@@ -607,6 +607,7 @@ class MonitorApplication(QObject):
             comparisons=context["comparisons"], speed=context["speed"],
             edges=context["edges"], edge_note=context["edge_note"],
             links=context["links"], link_note=context["link_note"],
+            signals=context["signals"], signal_note=context["signal_note"],
             pattern_note=context["pattern_note"], actions=context["actions"],
         ))
         if self._tray is not None:
@@ -825,7 +826,8 @@ class MonitorApplication(QObject):
     def _pattern_context(self, hours, verdict_key: str = "") -> dict:
         """Which edges served you, when it was bad, and what to try about it."""
         from .actions import suggest
-        from .patterns import by_edge, by_link, by_period, edge_verdict, hour_ranges
+        from .patterns import (by_edge, by_link, by_period, by_signal,
+                               edge_verdict, hour_ranges, signal_note_key)
         from .probes.cdninfo import describe
 
         buckets = self._history.buckets(hours)
@@ -857,6 +859,23 @@ class MonitorApplication(QObject):
         elif link_verdict.key:
             link_note = tr(link_verdict.key)
 
+        # Most homes have one wireless network, so by_link has nothing to
+        # compare - but the same rows still hold a comparison worth making.
+        signals = by_signal(buckets)
+        signal_verdict = edge_verdict(signals, prefix="signal")
+        signal_note = ""
+        if signal_verdict.key == "signal.differs" and signal_verdict.worst:
+            signal_note = tr("signal.differs",
+                             diff=f"{signal_verdict.difference_ms:.0f}",
+                             share=f"{signal_verdict.worst.share_pct:.0f}")
+        elif signals and signal_verdict.key:
+            # "Only one band" means two opposite things - strong throughout is
+            # good news, weak throughout is the answer by itself.
+            key = signal_note_key(signal_verdict)
+            best = signal_verdict.best
+            signal_note = (tr(key, pct=f"{(best.signal_pct or 0):.0f}")
+                           if key == "signal.always_weak" and best else tr(key))
+
         pattern = by_period(buckets)
         pattern_note = ""
         if pattern.has_pattern and pattern.worst:
@@ -877,6 +896,8 @@ class MonitorApplication(QObject):
             "edge_note": note,
             "links": links,
             "link_note": link_note,
+            "signals": signals,
+            "signal_note": signal_note,
             "pattern_note": pattern_note,
             "actions": suggest(
                 edge_verdict=verdict,
@@ -891,6 +912,7 @@ class MonitorApplication(QObject):
                 roams=sum(getattr(b, "roams", 0) for b in buckets),
                 band=current,
                 bluetooth_ms=self._config.audio.offset_ms,
+                signal_verdict=signal_verdict,
             ),
         }
 

@@ -272,3 +272,122 @@ def test_the_wireless_suggestions_count_as_something_you_can_fix():
 
     assert has_local_cause(suggest(link_verdict=_Verdict())) is True
     assert has_local_cause(suggest(roams=5)) is True
+
+
+# --------------------------------------------- strong signal versus weak
+def _signal_minutes(count, avg, pct, **extra):
+    return [Bucket(start=1000.0 + i * 60, count=30, ok=30, avg_ms=avg,
+                   signal_pct=pct, link="Home (5 GHz)", **extra)
+            for i in range(count)]
+
+
+def test_the_weak_minutes_are_compared_against_the_strong_ones():
+    """Most homes have exactly one network, so by_link has nothing to compare -
+    while the answer sits in the same rows it just averaged away."""
+    from lagscope.patterns import SIGNAL_STRONG, SIGNAL_WEAK, by_signal
+
+    buckets = _signal_minutes(45, 1800.0, 85) + _signal_minutes(15, 2900.0, 38, stalls=3)
+    stats = {item.host: item for item in by_signal(buckets)}
+
+    assert set(stats) == {SIGNAL_STRONG, SIGNAL_WEAK}
+    assert stats[SIGNAL_STRONG].avg_ms == pytest.approx(1800.0)
+    assert stats[SIGNAL_WEAK].avg_ms == pytest.approx(2900.0)
+    assert stats[SIGNAL_WEAK].stalls == 45
+
+    verdict = edge_verdict(by_signal(buckets), prefix="signal")
+    assert verdict.key == "signal.differs" and verdict.matters
+    assert verdict.difference_ms == pytest.approx(1100.0)
+    assert verdict.worst.host == SIGNAL_WEAK
+
+
+def test_the_split_is_the_threshold_the_rest_of_the_app_uses():
+    """Two parts of the app disagreeing about what "weak" means would be worse
+    than either of them being slightly off."""
+    from lagscope.patterns import SIGNAL_STRONG, SIGNAL_WEAK, by_signal
+    from lagscope.probes.path import WIFI_WEAK_PCT
+
+    below = by_signal(_signal_minutes(12, 2000.0, WIFI_WEAK_PCT - 1))
+    at = by_signal(_signal_minutes(12, 2000.0, WIFI_WEAK_PCT))
+    assert below[0].host == SIGNAL_WEAK
+    assert at[0].host == SIGNAL_STRONG
+
+
+def test_a_wired_machine_has_nothing_to_split():
+    from lagscope.patterns import by_signal
+
+    assert by_signal([Bucket(start=1000.0 + i * 60, count=30, ok=30, avg_ms=1800.0)
+                      for i in range(30)]) == []
+    assert by_signal([]) == []
+
+
+def test_one_side_only_is_still_reported_as_one_side():
+    """Always strong is good news; always weak is the answer by itself. Both
+    have to be distinguishable from "nothing to compare"."""
+    from lagscope.patterns import SIGNAL_STRONG, SIGNAL_WEAK, by_signal
+
+    strong = edge_verdict(by_signal(_signal_minutes(30, 1800.0, 90)), prefix="signal")
+    assert strong.key == "signal.only_one" and strong.best.host == SIGNAL_STRONG
+
+    weak = edge_verdict(by_signal(_signal_minutes(30, 2600.0, 30)), prefix="signal")
+    assert weak.key == "signal.only_one" and weak.best.host == SIGNAL_WEAK
+    assert weak.best.signal_pct == pytest.approx(30.0)
+
+
+def test_a_short_weak_stretch_is_not_enough_to_conclude_from():
+    from lagscope.patterns import MIN_BUCKETS_PER_EDGE, by_signal
+
+    buckets = (_signal_minutes(30, 1800.0, 85)
+               + _signal_minutes(MIN_BUCKETS_PER_EDGE - 1, 3000.0, 30))
+    assert edge_verdict(by_signal(buckets), prefix="signal").key == "signal.only_one"
+
+
+def test_the_original_buckets_are_not_disturbed():
+    """The grouping wraps them to add a label; the history rows themselves are
+    not something to be editing."""
+    from lagscope.patterns import by_signal
+
+    buckets = _signal_minutes(12, 1800.0, 85)
+    by_signal(buckets)
+    assert not any(hasattr(bucket, "signal_band") for bucket in buckets)
+
+
+def test_a_weak_signal_becomes_a_suggestion():
+    actions = suggest(signal_verdict=_Verdict())
+    assert "action.signal" in _keys(actions)
+
+
+def test_the_labels_are_real_translation_keys():
+    """They are stored, not translated, so they have to exist to be shown."""
+    from lagscope.i18n import STRINGS
+    from lagscope.patterns import SIGNAL_STRONG, SIGNAL_WEAK
+
+    assert SIGNAL_STRONG in STRINGS and SIGNAL_WEAK in STRINGS
+
+
+@pytest.mark.parametrize("pct,expected", [
+    (90, "signal.always_strong"),        # good news, and worth saying so
+    (30, "signal.always_weak"),          # the answer by itself
+])
+def test_one_band_only_means_two_opposite_things(pct, expected):
+    from lagscope.patterns import by_signal, signal_note_key
+
+    verdict = edge_verdict(by_signal(_signal_minutes(30, 2000.0, pct)), prefix="signal")
+    assert verdict.key == "signal.only_one"
+    assert signal_note_key(verdict) == expected
+
+
+def test_every_other_verdict_keeps_its_own_key():
+    from lagscope.patterns import by_signal, signal_note_key
+
+    buckets = _signal_minutes(45, 1800.0, 85) + _signal_minutes(15, 2900.0, 38)
+    assert signal_note_key(edge_verdict(by_signal(buckets), prefix="signal")) \
+        == "signal.differs"
+    assert signal_note_key(edge_verdict([], prefix="signal")) == "signal.not_enough"
+
+
+def test_the_sentences_it_can_choose_all_exist():
+    from lagscope.i18n import STRINGS
+
+    for key in ("signal.always_strong", "signal.always_weak", "signal.differs",
+                "signal.same", "signal.not_enough"):
+        assert key in STRINGS, key

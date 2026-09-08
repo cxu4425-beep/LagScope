@@ -860,6 +860,54 @@ STRINGS: dict[str, tuple[str, str, str]] = {
     "link.none": ("没有无线资讯（可能是有线连接）", "沒有無線資訊（可能是有線連接）", "No wireless recorded (probably a wired connection)"),
     "link.wired": ("这台机器是有线连接。", "這台機器是有線連接。", "This machine is on a wired connection."),
 
+    "signal.title": ("讯号好的时候 vs 讯号差的时候", "訊號好的時候 vs 訊號差的時候", "Strong signal versus weak"),
+    "signal.col_when": ("讯号", "訊號", "Signal"),
+    "signal.strong": ("讯号好", "訊號好", "Strong"),
+    "signal.weak": ("讯号弱", "訊號弱", "Weak"),
+    "signal.differs": (
+        "讯号弱的时候慢了 {diff} ms，而讯号弱的时间占了 {share}%。这是你家里的无线讯号，不是网路本身——"
+        "靠近路由器、把它从柜子或角落里移出来，或者插网路线。",
+        "訊號弱的時候慢了 {diff} ms，而訊號弱的時間佔了 {share}%。這是你家裡的無線訊號，不是網路本身——"
+        "靠近路由器、把它從櫃子或角落裡移出來，或者插網路線。",
+        "The weak-signal minutes ran {diff} ms slower, and they were {share}% of the time. "
+        "That is the wireless in your home, not the internet - move closer to the router, get it "
+        "out of the cupboard, or plug in a cable.",
+    ),
+    "signal.same": (
+        "讯号强弱的时候表现差不多，所以卡顿不是讯号造成的。",
+        "訊號強弱的時候表現差不多，所以卡頓不是訊號造成的。",
+        "Strong and weak minutes performed about the same, so the signal is not what makes it stutter.",
+    ),
+    "signal.always_strong": (
+        "整段时间讯号都很好，所以卡顿不是讯号造成的。",
+        "整段時間訊號都很好，所以卡頓不是訊號造成的。",
+        "The signal was strong throughout, so it is not what makes it stutter.",
+    ),
+    "signal.always_weak": (
+        "整段时间讯号都偏弱（平均 {pct}%）。没有好讯号的时段可以对照，但这个强度本身就值得先处理——"
+        "靠近路由器，或把它换个位置。",
+        "整段時間訊號都偏弱（平均 {pct}%）。沒有好訊號的時段可以對照，但這個強度本身就值得先處理——"
+        "靠近路由器，或把它換個位置。",
+        "The signal was weak throughout (averaging {pct}%). There is no strong stretch to compare "
+        "against, but that strength is worth dealing with on its own - move closer to the router, "
+        "or move the router.",
+    ),
+    "signal.not_enough": (
+        "记录还不够久，看不出讯号强弱的差别（每种至少要 10 分钟）。",
+        "紀錄還不夠久，看不出訊號強弱的差別（每種至少要 10 分鐘）。",
+        "Not enough recorded yet to compare strong and weak signal (each needs ten minutes).",
+    ),
+    "action.signal": (
+        "靠近路由器，或把路由器从柜子／角落里移出来——讯号弱的时段明显比较慢",
+        "靠近路由器，或把路由器從櫃子／角落裡移出來——訊號弱的時段明顯比較慢",
+        "Move closer to the router, or get the router out of the cupboard - the weak-signal "
+        "stretches were measurably slower",
+    ),
+    "action.because.signal": (
+        "讯号弱的时候慢很多，而且那是你能改的",
+        "訊號弱的時候慢很多，而且那是你能改的",
+        "the weak-signal minutes were much slower, and that is yours to change",
+    ),
     "action.switch_band": (
         "换到比较快的那个无线网路（通常是 5 GHz 那个）",
         "換到比較快的那個無線網路（通常是 5 GHz 那個）",

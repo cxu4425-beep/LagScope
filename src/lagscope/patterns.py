@@ -116,6 +116,52 @@ def by_edge(buckets: Sequence) -> List[EdgeStats]:
     return _group_by(buckets, "host")
 
 
+# Labels for the signal comparison. Stored rather than translated here, the
+# same way an edge stores a hostname: what to call it is the display's job.
+SIGNAL_STRONG = "signal.strong"
+SIGNAL_WEAK = "signal.weak"
+
+
+def by_signal(buckets: Sequence) -> List[EdgeStats]:
+    """Compare the minutes with a strong signal against the weak ones.
+
+    Most people have exactly one wireless network, so by_link has nothing to
+    compare and says so - while the answer sits in the same rows it just
+    averaged away. A run where the weak-signal minutes are 1100 ms worse than
+    the strong ones is not "nothing to compare": it is the whole answer, and it
+    needs no second router to see.
+
+    The split is the same threshold the path check already calls weak, so the
+    two parts of the app do not disagree about what a bad signal is.
+    """
+    from .probes.path import WIFI_WEAK_PCT
+
+    labelled = []
+    for bucket in buckets or ():
+        signal = getattr(bucket, "signal_pct", None)
+        if signal is None or bucket.avg_ms is None:
+            continue
+        labelled.append((SIGNAL_WEAK if signal < WIFI_WEAK_PCT else SIGNAL_STRONG,
+                         bucket))
+    if not labelled:
+        return []
+
+    # _group_by reads an attribute, so hand it objects that have one. A shallow
+    # stand-in keeps the real buckets untouched.
+    class _Labelled:
+        __slots__ = ("_bucket", "signal_band")
+
+        def __init__(self, bucket, band):
+            self._bucket = bucket
+            self.signal_band = band
+
+        def __getattr__(self, name):
+            return getattr(self._bucket, name)
+
+    return _group_by([_Labelled(bucket, band) for band, bucket in labelled],
+                     "signal_band")
+
+
 def by_link(buckets: Sequence) -> List[EdgeStats]:
     """Which wireless link carried each minute.
 
