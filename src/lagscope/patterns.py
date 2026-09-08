@@ -162,6 +162,23 @@ def by_signal(buckets: Sequence) -> List[EdgeStats]:
                      "signal_band")
 
 
+def signal_note_key(verdict) -> str:
+    """Which sentence describes this signal verdict.
+
+    Split out of the UI because "only one band was seen" means two opposite
+    things: a signal that was strong throughout is good news, and one that was
+    weak throughout is the answer by itself. Reporting both as "nothing to
+    compare" would throw away the more useful of the two.
+    """
+    key = getattr(verdict, "key", "")
+    if key != "signal.only_one":
+        return key
+    best = getattr(verdict, "best", None)
+    if best is not None and best.host == SIGNAL_WEAK:
+        return "signal.always_weak"
+    return "signal.always_strong"
+
+
 def by_link(buckets: Sequence) -> List[EdgeStats]:
     """Which wireless link carried each minute.
 
