@@ -273,30 +273,46 @@ def test_recovering_then_failing_again_is_a_second_stall():
     assert log.count(STALL) == 2
 
 
-def test_a_jump_above_the_baseline_is_a_spike():
-    log = EventLog(spike_factor=2.0, min_baseline_samples=5)
-    for _ in range(10):
-        assert log.observe(_ok(40)) is None
-    event = log.observe(_ok(400))
+def test_a_stretch_above_the_baseline_is_a_spike():
+    log = EventLog(min_baseline_samples=5)
+    now = time.time()
+    for index in range(10):
+        assert log.observe(_ok(40, ts=now + index * 2)) is None
+    event = None
+    for index in range(5):
+        event = log.observe(_ok(400, ts=now + 20 + index * 2)) or event
 
     assert event is not None and event.kind == SPIKE
     assert event.baseline_ms == pytest.approx(40)
-    assert log.count(SPIKE) == 1
+    assert log.count(SPIKE) == 1        # one event for the stretch, not five
+
+
+def test_one_bad_sample_on_its_own_is_not_an_event():
+    """A single high reading is what a wireless link does between two good
+    ones. Counting them is what turned two days into 1,421 "spikes"."""
+    log = EventLog(min_baseline_samples=5)
+    now = time.time()
+    for index in range(20):
+        log.observe(_ok(40, ts=now + index * 2))
+    assert log.observe(_ok(900, ts=now + 40)) is None
+    assert log.count(SPIKE) == 0
 
 
 def test_a_spike_does_not_become_the_new_normal():
-    log = EventLog(spike_factor=2.0, min_baseline_samples=5)
-    for _ in range(10):
-        log.observe(_ok(40))
-    for _ in range(5):
-        log.observe(_ok(400))
+    log = EventLog(min_baseline_samples=5)
+    now = time.time()
+    for index in range(30):
+        log.observe(_ok(40, ts=now + index * 2))
+    for index in range(5):
+        log.observe(_ok(400, ts=now + 60 + index * 2))
     assert log.baseline() == pytest.approx(40)
 
 
 def test_no_spikes_before_there_is_a_baseline():
     log = EventLog(min_baseline_samples=10)
     assert log.observe(_ok(40)) is None
-    assert log.observe(_ok(4000)) is None       # nothing to compare against yet
+    for _ in range(8):
+        assert log.observe(_ok(4000)) is None   # nothing to compare against yet
 
 
 def test_old_events_fall_out_of_the_window():
@@ -308,9 +324,11 @@ def test_old_events_fall_out_of_the_window():
 
 def test_summary_reports_what_happened():
     log = EventLog(min_baseline_samples=3)
-    for _ in range(5):
-        log.observe(_ok(50))
-    log.observe(_ok(500))
+    now = time.time()
+    for index in range(20):
+        log.observe(_ok(50, ts=now + index * 2))
+    for index in range(5):
+        log.observe(_ok(500, ts=now + 40 + index * 2))
 
     summary = log.summary()
 
@@ -551,3 +569,135 @@ def test_an_ipv6_peer_brackets_its_address():
 
 def test_an_ipv4_peer_is_left_exactly_as_it_was():
     assert str(Peer("93.184.216.34", 443)) == "93.184.216.34:443"
+
+
+def test_a_wobbly_connection_does_not_report_its_own_wobble_as_events():
+    """Two real days produced 1,421 spikes - one every twenty-two samples.
+
+    The old rule compared each value against the median of the last two
+    minutes and flagged anything twice as large. On a wireless link that
+    normally moves between 30 and 90 ms, that fires constantly and none of it
+    is an event: the connection is doing what it always does.
+    """
+    import random
+
+    log = EventLog(min_baseline_samples=10)
+    rng = random.Random(20260913)
+    now = time.time()
+    for index in range(1200):
+        log.observe(_ok(rng.uniform(30, 90), ts=now + index * 2))
+
+    assert log.count(SPIKE) == 0, f"{log.count(SPIKE)} events in ordinary noise"
+
+
+def test_the_same_connection_still_reports_a_real_one():
+    """The point is not to report less; it is to report what is unusual."""
+    import random
+
+    log = EventLog(min_baseline_samples=10)
+    rng = random.Random(20260913)
+    now = time.time()
+    for index in range(1200):
+        log.observe(_ok(rng.uniform(30, 90), ts=now + index * 2))
+
+    event = None
+    for step in range(5):
+        event = log.observe(_ok(400, ts=now + 2400 + step * 2)) or event
+    assert event is not None and event.kind == SPIKE
+    assert event.threshold_ms is not None and event.threshold_ms < 400
+
+
+def test_the_bar_follows_the_connection_rather_than_a_constant():
+    """A steady link and a jittery one at the same average are not the same."""
+    import random
+
+    steady = EventLog(min_baseline_samples=10)
+    jittery = EventLog(min_baseline_samples=10)
+    rng = random.Random(4)
+    now = time.time()
+    for index in range(200):
+        steady.observe(_ok(60 + rng.uniform(-1, 1), ts=now + index * 2))
+        jittery.observe(_ok(rng.uniform(20, 140), ts=now + index * 2))
+
+    assert steady.threshold() < jittery.threshold()
+    # 130 ms is remarkable on the steady link and routine on the other one.
+    steady_event = jittery_event = None
+    for step in range(5):
+        at = now + 400 + step * 2
+        steady_event = steady.observe(_ok(130, ts=at)) or steady_event
+        jittery_event = jittery.observe(_ok(130, ts=at)) or jittery_event
+    assert steady_event is not None
+    assert jittery_event is None
+
+
+def test_a_small_absolute_jump_is_never_an_event():
+    """18 ms to 37 ms doubles and nobody on earth notices."""
+    log = EventLog(min_baseline_samples=5)
+    now = time.time()
+    for index in range(20):
+        log.observe(_ok(18, ts=now + index * 2))
+    for step in range(5):
+        assert log.observe(_ok(37, ts=now + 60 + step * 2)) is None
+    event = None
+    for step in range(5):
+        event = log.observe(_ok(300, ts=now + 80 + step * 2)) or event
+    assert event is not None
+
+
+def test_normal_means_the_last_half_hour_not_the_last_two_minutes():
+    """An evening that degrades slowly used to register as nothing at all:
+    every value looked fine next to the two minutes before it."""
+    log = EventLog(min_baseline_samples=10)
+    now = time.time()
+    for index in range(300):            # ten minutes at 2 s, steady and good
+        log.observe(_ok(40, ts=now + index * 2))
+    assert log.baseline() == pytest.approx(40)
+    # Climbing gently: each step is small, but the half hour remembers 40 ms.
+    event = None
+    for step in range(1, 30):
+        event = log.observe(_ok(40 + step * 8, ts=now + 600 + step * 2)) or event
+    assert event is not None and event.kind == SPIKE
+
+
+def test_the_baseline_forgets_what_is_older_than_its_horizon():
+    log = EventLog(min_baseline_samples=5, baseline_s=600)
+    now = time.time()
+    for index in range(20):
+        log.observe(_ok(500, ts=now + index * 2))
+    for index in range(20):
+        log.observe(_ok(40, ts=now + 1200 + index * 2))
+    assert log.baseline() == pytest.approx(40)
+
+
+def test_a_connection_that_gets_worse_and_stays_worse_becomes_the_new_normal():
+    """Otherwise the bar never moves: the first bad sample is an event and
+    every sample after it is "still spiking", forever, against a baseline
+    frozen at how good things used to be."""
+    log = EventLog(min_baseline_samples=10, level_shift_s=120)
+    now = time.time()
+    for index in range(60):
+        log.observe(_ok(40, ts=now + index * 2))
+    for index in range(200):                    # it moved to 300 ms and stayed
+        log.observe(_ok(300, ts=now + 120 + index * 2))
+
+    assert log.baseline() > 100, "the baseline never learned the new normal"
+    assert log.count(SPIKE) == 1, "one event for the change, not one per sample"
+    # And from the new normal, a jump is measured against that.
+    for step in range(5):
+        assert log.observe(_ok(320, ts=now + 600 + step * 2)) is None
+    event = None
+    for step in range(5):
+        event = log.observe(_ok(2000, ts=now + 640 + step * 2)) or event
+    assert event is not None
+
+
+def test_a_brief_hiccup_is_still_thrown_away():
+    """The level-shift rule must not let a two-second outlier into the normal."""
+    log = EventLog(min_baseline_samples=10, level_shift_s=120)
+    now = time.time()
+    for index in range(60):
+        log.observe(_ok(40, ts=now + index * 2))
+    before = log.baseline()
+    log.observe(_ok(900, ts=now + 120))
+    log.observe(_ok(41, ts=now + 122))
+    assert log.baseline() == pytest.approx(before, abs=1.0)
