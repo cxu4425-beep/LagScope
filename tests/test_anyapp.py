@@ -716,10 +716,15 @@ def test_an_outage_does_not_fake_a_run_of_bad_latency_around_it():
     for step in range(200):                     # then it goes down entirely
         log.observe(LatencySample(ok=False, error="timeout",
                                   ts=now + 140 + step * 2))
+    bar = log.threshold()
     log.observe(_ok(900, ts=now + 700))         # back, still bad, ten minutes on
 
-    assert log.baseline() == pytest.approx(good, abs=1.0), \
+    # The bar is the sensitive part: folding six 900 ms samples into fifty-odd
+    # 40 ms ones barely moves the median, but it moves the 99th percentile all
+    # the way up to 900 - and nothing would ever be reported again.
+    assert log.threshold() == pytest.approx(bar, abs=1.0), \
         "an outage was mistaken for a sustained run of bad latency"
+    assert log.baseline() == pytest.approx(good, abs=1.0)
 
 
 def test_after_a_long_enough_outage_there_is_no_recent_normal_to_compare_to():
