@@ -18,6 +18,7 @@ from PySide6.QtCore import QObject, QTimer, Signal, Slot
 
 from .config import Config, title_memory_path
 from .detect import AutoDetector
+from .health import HEALTH, ICMP, WIFI
 from .models import (
     KIND_APP, KIND_LIVE, KIND_NETWORK, KIND_TARGET, KIND_VIDEO, ExtraResult, LatencySample,
     WatchTarget,
@@ -502,11 +503,23 @@ class MonitorWorker(QObject):
         self._wifi_at = now
         try:
             self._wifi = wifi_info()
-        except Exception:
-            # A machine with no wireless at all is the normal case here, not a
-            # failure worth a traceback in the log every half minute.
+        except Exception as exc:
+            # A machine with no wireless is the normal case, so this is not an
+            # error - but it stopped at debug level for two days on a laptop
+            # that is always on Wi-Fi, and the report said "probably wired".
+            # Recorded where something can say so.
             LOG.debug("wifi state unavailable", exc_info=True)
+            HEALTH.degraded(WIFI, f"{type(exc).__name__}: {exc}")
             self._wifi = None
+            return None
+
+        if self._wifi is None:
+            # Reading nothing is either "no wireless on this machine" or "the
+            # reading failed", and the two are indistinguishable from here.
+            # Saying which is impossible; saying that it happened is not.
+            HEALTH.degraded(WIFI, "the wireless state came back empty")
+        else:
+            HEALTH.working(WIFI)
         return self._wifi
 
     def _with_link(self, sample: LatencySample) -> LatencySample:

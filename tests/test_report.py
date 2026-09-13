@@ -294,3 +294,55 @@ class _EdgeRow:
         self.host, self.avg_ms = host, avg
         self.share_pct, self.stalls, self.buckets = 50.0, 0, 20
         self.signal_pct, self.roams, self.samples, self.ok = None, 0, 600, 600
+
+
+# ------------------------------- what is not working, and what it costs
+def test_a_degradation_is_reported_with_its_consequence():
+    """The Wi-Fi reading failed on a real machine for two days. The report
+    said the connection was probably wired, and the only trace anywhere was a
+    debug log line. This is the output that would have said so on day one."""
+    from lagscope.health import DISPLAY, WIFI, Health
+    from lagscope.report import build_text
+
+    health = Health()
+    health.degraded(WIFI, "the wireless state came back empty", now=1_757_300_000.0)
+    health.degraded(DISPLAY, "", now=1_757_301_000.0)
+    rows = [item.as_dict() for item in health.current()]
+
+    text = build_text(summary={"hours": 48}, health=rows)
+
+    assert tr("health.title") in text
+    assert tr("health.wifi") in text
+    assert tr("health.wifi.cost") in text          # not just the name of the fault
+    assert tr("health.display.cost") in text
+
+
+def test_a_healthy_machine_gets_no_section_at_all():
+    from lagscope.report import build_text
+
+    assert tr("health.title") not in build_text(summary={"hours": 48}, health=[])
+
+
+def test_the_consequence_is_never_left_out():
+    """A list of faults with no consequences is just noise - every key has to
+    have a sentence saying what it costs."""
+    from lagscope.health import CONSEQUENCE
+    from lagscope.i18n import STRINGS
+
+    assert CONSEQUENCE, "no degradations are declared"
+    for key, consequence in CONSEQUENCE.items():
+        assert key in STRINGS, key
+        assert consequence in STRINGS, consequence
+
+
+def test_rows_render_from_objects_as_well_as_dicts():
+    """The window reads the live registry; the report reads a serialised copy."""
+    from lagscope.health import WIFI, Health
+    from lagscope.report import health_rows
+
+    health = Health()
+    health.degraded(WIFI, "empty", now=1_757_300_000.0)
+    from_objects = health_rows(health.current())
+    from_dicts = health_rows([item.as_dict() for item in health.current()])
+    assert from_objects == from_dicts
+    assert from_objects[0][0] == tr("health.wifi")

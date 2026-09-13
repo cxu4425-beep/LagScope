@@ -39,6 +39,7 @@ from PySide6.QtWidgets import (
 
 from ..audio import Clicker, available as audio_available, spawns_process
 from ..config import Config
+from ..health import AUDIO, HEALTH
 from ..i18n import tr
 from .icons import app_icon
 from .theme import palette_for
@@ -249,6 +250,9 @@ class AudioSyncDialog(QDialog):
             text = f"{text}\n{detail}"
         self.failure_label.setText(text)
         self.failure_label.setVisible(True)
+        # Also on the report, so "I could not calibrate Bluetooth" is visible
+        # later, from the history window, without reopening this dialog.
+        HEALTH.degraded(AUDIO, detail)
 
     def _on_toggle_run(self, running: bool) -> None:
         if running and not self._available:
@@ -281,7 +285,9 @@ class AudioSyncDialog(QDialog):
 
         if not self._clicked:
             self._clicked = True
-            if self._clicker is not None and not self._clicker.play():
+            if self._clicker is not None and self._clicker.play():
+                HEALTH.working(AUDIO)     # a click came out; stop reporting it
+            elif self._clicker is not None:
                 # Playback died after the dialog opened - stop rather than let
                 # someone calibrate against a silence, and say why. Greying the
                 # button out on its own leaves a dialog that does nothing and

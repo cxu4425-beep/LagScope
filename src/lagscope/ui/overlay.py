@@ -19,6 +19,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QApplication, QWidget
 
 from ..config import Config
+from ..health import HEALTH, WINDOW
 from ..i18n import tr
 from ..models import KIND_APP, KIND_LIVE, KIND_TARGET, KIND_VIDEO, LatencySample, RollingStats
 from ..probes.cdninfo import locate_line
@@ -153,6 +154,11 @@ class OverlayWindow(QWidget):
 
     def _follow_window(self) -> None:
         overlay = self._config.overlay
+        if not getattr(self._finder, "available", False):
+            # Follow mode is on but this platform cannot list windows, so the
+            # card will sit in a corner no matter what the setting says.
+            HEALTH.degraded(WINDOW, "no window list on this platform")
+            return
         rect = self._finder.find(overlay.follow_window_keyword)
         if rect is None:
             # Target not on screen right now: hold the last position.

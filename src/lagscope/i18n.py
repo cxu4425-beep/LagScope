@@ -475,6 +475,46 @@ STRINGS: dict[str, tuple[str, str, str]] = {
     ),
     "label.audio": ("耳机", "耳機", "Headset"),
     "label.server": ("伺服器", "伺服器", "Server"),
+
+    # -- what is not working, and what it costs --------------------------
+    "health.title": ("目前有量不到的東西", "目前有量不到的東西", "Not currently measurable"),
+    "health.since": ("從 {when} 起", "從 {when} 起", "since {when}"),
+    "health.wifi": ("無線網路資訊", "無線網路資訊", "Wireless details"),
+    "health.wifi.cost": (
+        "报告会说这台机器是有线连接，而且没办法比较不同的无线网路或讯号强弱。",
+        "報告會說這台機器是有線連接，而且沒辦法比較不同的無線網路或訊號強弱。",
+        "Reports will say this machine is on a cable, and cannot compare wireless "
+        "networks or signal strength.",
+    ),
+    "health.display": ("显示器刷新率", "顯示器刷新率", "Refresh rate"),
+    "health.display.cost": (
+        "显示延迟是照 60 Hz 假设算的，不是量到的——总延迟里那一段可能偏高或偏低。",
+        "顯示延遲是照 60 Hz 假設算的，不是量到的——總延遲裡那一段可能偏高或偏低。",
+        "The display figure assumes 60 Hz instead of measuring it, so that part of the "
+        "total may be too high or too low.",
+    ),
+    "health.icmp": ("ICMP (ping)", "ICMP (ping)", "ICMP (ping)"),
+    "health.icmp.cost": (
+        "改用 TCP 交握量延迟，通常会比 ping 高几毫秒。",
+        "改用 TCP 交握量延遲，通常會比 ping 高幾毫秒。",
+        "Latency is measured with a TCP handshake instead, usually a few milliseconds "
+        "higher than ping.",
+    ),
+    "health.audio": ("音效输出", "音效輸出", "Audio output"),
+    "health.audio.cost": (
+        "没办法做蓝牙耳机延迟校正。",
+        "沒辦法做藍牙耳機延遲校正。",
+        "The Bluetooth headset calibration cannot run.",
+    ),
+    "health.window": ("视窗跟随", "視窗跟隨", "Window following"),
+    "health.window.cost": (
+        "悬浮窗没办法跟着某个视窗移动，会固定在萤幕角落。",
+        "懸浮窗沒辦法跟著某個視窗移動，會固定在螢幕角落。",
+        "The overlay cannot follow a window and stays in a screen corner instead.",
+    ),
+    "health.all_working": (
+        "所有量测都正常。", "所有量測都正常。", "Everything is measuring normally.",
+    ),
     "server.at_most_km": ("至多 {km} km", "至多 {km} km", "within {km} km"),
     "server.title": ("目前连到哪里", "目前連到哪裡", "Where you are connected"),
     "server.unknown": ("看不出来", "看不出來", "cannot tell"),

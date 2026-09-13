@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 
 import requests
 
+from ..health import HEALTH, ICMP
 from ..models import NetworkMeasurement
 
 USER_AGENT = (
@@ -145,7 +146,11 @@ def icmp_ping_ms(host: str, timeout_s: float = 2.0) -> Optional[float]:
             command, capture_output=True, text=True, timeout=timeout_s + 2.0,
             creationflags=creationflags,
         )
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError) as exc:
+        # ping itself could not be run - that is the tool, not the host, so it
+        # is worth saying out loud. A host that merely filters ICMP comes back
+        # with a non-zero exit code below and is nobody's fault.
+        HEALTH.degraded(ICMP, f"ping: {type(exc).__name__}: {exc}")
         return None
     if completed.returncode != 0:
         return None
@@ -153,9 +158,11 @@ def icmp_ping_ms(host: str, timeout_s: float = 2.0) -> Optional[float]:
     if match is None:
         return None
     try:
-        return float(match.group(1).replace(",", "."))
+        value = float(match.group(1).replace(",", "."))
     except ValueError:
         return None
+    HEALTH.working(ICMP)
+    return value
 
 
 def clock_offset_ms(server_date_header: str, local_recv_epoch: float, rtt_ms: Optional[float]) -> Optional[float]:

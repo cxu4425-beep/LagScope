@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 from ..config import Config
 from ..history import Bucket, History
 from ..i18n import tr
-from ..report import grid_values, nice_ceiling, worst_hour_line
+from ..report import grid_values, health_rows, nice_ceiling, worst_hour_line
 from .icons import app_icon
 from .theme import Palette, format_ms, palette_for
 
@@ -338,6 +338,19 @@ def analysis_html(context: dict) -> str:
         parts.append(f"<p><b>{escape(tr('action.title'))}</b></p><ol>{items}</ol>")
         if not has_local_cause(actions):
             parts.append(f"<p>{escape(tr('action.not_yours'))}</p>")
+
+    problems = health_rows(context.get("health") or ())
+    if problems:
+        rows = "".join(
+            f"<tr><td valign='top'><b>{escape(what)}</b><br>"
+            f"<small>{escape(tr('health.since', when=since)) if since else ''}</small></td>"
+            f"<td>{escape(why)}</td></tr>"
+            for what, why, since in problems
+        )
+        parts.append(
+            f"<b>{escape(tr('health.title'))}</b>"
+            f"<table width='100%' cellspacing='0' cellpadding='3'>{rows}</table>"
+        )
 
     edges = context.get("edges") or ()
     # Watching an application these are separate services, not alternatives,

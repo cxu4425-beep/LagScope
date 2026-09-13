@@ -283,6 +283,28 @@ def _fmt_time(ts: Optional[float]) -> str:
     return time.strftime("%Y-%m-%d %H:%M", time.localtime(ts))
 
 
+def health_rows(health: Sequence) -> List[tuple]:
+    """``(what, why it matters, since)`` for each thing that is not working.
+
+    Shared by the report and the history window so the two cannot end up
+    describing the same fault differently.
+    """
+    rows = []
+    for item in health or ():
+        key = item.get("key", "") if isinstance(item, dict) else getattr(item, "key", "")
+        if not key:
+            continue
+        detail = (item.get("detail", "") if isinstance(item, dict)
+                  else getattr(item, "detail", ""))
+        consequence = (item.get("consequence", "") if isinstance(item, dict)
+                       else getattr(item, "consequence_key", ""))
+        since = (item.get("since", 0.0) if isinstance(item, dict)
+                 else getattr(item, "since", 0.0))
+        rows.append((tr(key), tr(consequence) if consequence else detail,
+                     _fmt_time(since) if since else ""))
+    return rows
+
+
 def summary_rows(summary: dict) -> List[tuple]:
     """The headline table, shared by the HTML and the plain-text versions."""
     uptime = 100.0 - (summary.get("loss_pct") or 0.0)
@@ -404,6 +426,7 @@ def build_html(*, buckets: Sequence[Bucket], summary: dict, bucket_s: float = 60
                edges_comparable: bool = True,
                links: Sequence = (), link_note: str = "",
                signals: Sequence = (), signal_note: str = "",
+               health: Sequence = (),
                actions: Sequence = (),
                good_ms: Optional[float] = None, warn_ms: Optional[float] = None) -> str:
     """The whole report as one HTML document with nothing external in it."""
@@ -463,6 +486,15 @@ def build_html(*, buckets: Sequence[Bucket], summary: dict, bucket_s: float = 60
         for key, value in summary_rows(summary)
     )
     body.append(f'<div class="card"><div class="grid">{cells}</div></div>')
+
+    problems = health_rows(health)
+    if problems:
+        body.append(f"<h2>{esc(tr('health.title'))}</h2>")
+        rows = "".join(
+            f"<tr><td>{esc(what)}</td><td>{esc(why)}</td><td>{esc(since)}</td></tr>"
+            for what, why, since in problems
+        )
+        body.append(f'<table><tbody>{rows}</tbody></table>')
 
     body.append(f"<h2>{esc(tr('report.chart'))}</h2>")
     body.append('<div class="card">')
@@ -657,6 +689,7 @@ def build_text(*, summary: dict, worst: Optional[dict] = None, path_report=None,
                edges_comparable: bool = True,
                links: Sequence = (), link_note: str = "",
                signals: Sequence = (), signal_note: str = "",
+               health: Sequence = (),
                actions: Sequence = ()) -> str:
     """The same findings as something you can paste into a forum reply."""
     hours = summary.get("hours")
@@ -669,6 +702,15 @@ def build_text(*, summary: dict, worst: Optional[dict] = None, path_report=None,
     label = target_label or summary.get("label", "")
     if label:
         lines.append(f"{tr('report.watching')}: {label}")
+    problems = health_rows(health)
+    if problems:
+        lines.append("")
+        lines.append(f"{tr('health.title')}:")
+        for what, why, since in problems:
+            when = f"  ({tr('health.since', when=since)})" if since else ""
+            lines.append(f"  {what}{when}")
+            lines.append(f"    {why}")
+
     lines.append("")
     width = max(_width(key) for key, _value in summary_rows(summary))
     for key, value in summary_rows(summary):

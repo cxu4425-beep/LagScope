@@ -75,11 +75,23 @@ class DisplayProbe:
 
     def frame_period_ms(self) -> float:
         """Best available frame period: measured, then reported refresh rate."""
+        from ..health import DISPLAY, HEALTH
+
         measured = self.frame_ms
         if measured is not None:
+            HEALTH.working(DISPLAY)
             return measured
         hz = self.refresh_hz or self.fallback_hz
-        return 1000.0 / hz if hz else 16.67
+        if hz:
+            # A reported rate rather than a measured one: fine, and worth
+            # nobody's attention.
+            HEALTH.working(DISPLAY)
+            return 1000.0 / hz
+        # Neither measured nor reported. 16.67 ms is a guess that 60 Hz is
+        # right, and it goes straight into the headline total as if it had
+        # been observed.
+        HEALTH.degraded(DISPLAY, "assuming 60 Hz: no frame timing, no reported rate")
+        return 16.67
 
     def estimate_ms(self, frames_in_flight: float = 2.0, manual_offset_ms: float = 0.0) -> float:
         """Estimated client -> photons delay in milliseconds."""

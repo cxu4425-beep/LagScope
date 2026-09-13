@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 from . import APP_NAME, REPO_URL, __version__
 from .autostart import get_autostart, is_supported as autostart_supported, set_autostart
 from .config import Config, parse_room_id, app_config_dir
+from .health import HEALTH
 from .i18n import set_language, tr
 from .events import STALL, EventLog, Notifier
 from .history import History
@@ -609,6 +610,7 @@ class MonitorApplication(QObject):
             edges_comparable=context["edges_comparable"],
             links=context["links"], link_note=context["link_note"],
             signals=context["signals"], signal_note=context["signal_note"],
+            health=context["health"],
             pattern_note=context["pattern_note"], actions=context["actions"],
         ))
         if self._tray is not None:
@@ -906,6 +908,9 @@ class MonitorApplication(QObject):
             "edges": edges,
             "edge_note": note,
             "edges_comparable": comparable,
+            # What cannot be measured right now. First in the report,
+            # because it changes how the numbers below should be read.
+            "health": [item.as_dict() for item in HEALTH.current()],
             "links": links,
             "link_note": link_note,
             "signals": signals,

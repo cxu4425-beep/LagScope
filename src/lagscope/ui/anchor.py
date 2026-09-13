@@ -12,6 +12,8 @@ import logging
 import sys
 from typing import NamedTuple, Optional
 
+from ..health import HEALTH, WINDOW
+
 LOG = logging.getLogger(__name__)
 
 
@@ -115,7 +117,9 @@ class Win32WindowFinder(WindowFinder):
             self._user32.EnumWindows(enum_proc(callback), 0)
         except OSError as exc:
             LOG.debug("EnumWindows failed: %s", exc)
+            HEALTH.degraded(WINDOW, f"EnumWindows: {exc}")
             return []
+        HEALTH.working(WINDOW)
         return windows
 
     def foreground_title(self) -> str:  # pragma: no cover - Windows only
