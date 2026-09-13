@@ -113,6 +113,11 @@ class EventLog:
                 self._events.append(event)
             self._in_stall = True
             self._in_spike = False
+            # The stretch of bad samples is over - it ended in a failure. Left
+            # in place, its first timestamp would later be measured against a
+            # sample from after the outage, and a gap of any length would look
+            # like a two-minute run of bad latency that never happened.
+            self._run = []
             return event
 
         self._in_stall = False

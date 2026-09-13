@@ -701,3 +701,35 @@ def test_a_brief_hiccup_is_still_thrown_away():
     log.observe(_ok(900, ts=now + 120))
     log.observe(_ok(41, ts=now + 122))
     assert log.baseline() == pytest.approx(before, abs=1.0)
+
+
+def test_an_outage_does_not_fake_a_run_of_bad_latency_around_it():
+    """A spike, then the probe fails for an hour, then one more bad sample:
+    the two are not a one-hour bad stretch, and must not be read as one."""
+    log = EventLog(min_baseline_samples=10, level_shift_s=120)
+    now = time.time()
+    for index in range(60):
+        log.observe(_ok(40, ts=now + index * 2))
+    good = log.baseline()
+    for step in range(5):                       # a real spike starts
+        log.observe(_ok(900, ts=now + 120 + step * 2))
+    for step in range(200):                     # then it goes down entirely
+        log.observe(LatencySample(ok=False, error="timeout",
+                                  ts=now + 140 + step * 2))
+    log.observe(_ok(900, ts=now + 700))         # back, still bad, ten minutes on
+
+    assert log.baseline() == pytest.approx(good, abs=1.0), \
+        "an outage was mistaken for a sustained run of bad latency"
+
+
+def test_after_a_long_enough_outage_there_is_no_recent_normal_to_compare_to():
+    """Nothing measured for over half an hour means nothing to call normal,
+    and the honest answer is to report no spikes until it is rebuilt."""
+    log = EventLog(min_baseline_samples=10)
+    now = time.time()
+    for index in range(60):
+        log.observe(_ok(40, ts=now + index * 2))
+    assert log.threshold() is not None
+    for step in range(5):
+        assert log.observe(_ok(900, ts=now + 3600 + step * 2)) is None
+    assert log.baseline() is None
