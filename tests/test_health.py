@@ -154,6 +154,20 @@ def test_the_display_probe_reports_when_it_is_guessing_60hz():
     assert "60" in HEALTH.current()[0].detail
 
 
+def test_the_default_60hz_fallback_is_a_guess_and_says_so():
+    """The probe as the app builds it, before anything has reported a rate.
+
+    A real dump had frame_ms and refresh_hz both empty and a 25 ms display
+    estimate - and the health list said nothing, because the 60 Hz default
+    was being counted as a rate the system had reported.
+    """
+    from lagscope.probes.display import DisplayProbe
+
+    probe = DisplayProbe()
+    assert probe.frame_period_ms() == pytest.approx(1000.0 / 60)
+    assert HEALTH.is_degraded(DISPLAY)
+
+
 def test_a_reported_refresh_rate_is_nobody_s_business():
     """Not measured but reported by the system is fine, not a fault."""
     from lagscope.probes.display import DisplayProbe

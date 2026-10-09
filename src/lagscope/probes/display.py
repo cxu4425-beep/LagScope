@@ -81,12 +81,18 @@ class DisplayProbe:
         if measured is not None:
             HEALTH.working(DISPLAY)
             return measured
-        hz = self.refresh_hz or self.fallback_hz
-        if hz:
+        if self.refresh_hz:
             # A reported rate rather than a measured one: fine, and worth
             # nobody's attention.
             HEALTH.working(DISPLAY)
-            return 1000.0 / hz
+            return 1000.0 / self.refresh_hz
+        if self.fallback_hz:
+            # The fallback is an assumption, not a report. Treating it as one
+            # hid exactly the case this exists to show: a real dump had no
+            # frame timing and no refresh rate, and said nothing about it.
+            HEALTH.degraded(DISPLAY, f"assuming {self.fallback_hz:.0f} Hz: "
+                                     "no frame timing, no reported rate")
+            return 1000.0 / self.fallback_hz
         # Neither measured nor reported. 16.67 ms is a guess that 60 Hz is
         # right, and it goes straight into the headline total as if it had
         # been observed.

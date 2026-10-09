@@ -110,6 +110,15 @@ class MonitorApplication(QObject):
         self._config = config.sanitized()
         self._stats = RollingStats(self._config.sample_window)
         self._display = DisplayProbe()
+        # The overlay reads the refresh rate when it is shown. Hidden - and
+        # plenty of people run this from the tray - it never is, and the
+        # display estimate fell back to a 60 Hz guess on a screen that would
+        # have said what it runs at if asked. Ask now; the overlay refines it
+        # with its own screen when it appears.
+        primary = app.primaryScreen() if app is not None else None
+        rate = primary.refreshRate() if primary is not None else 0.0
+        if rate and rate > 1:
+            self._display.refresh_hz = rate
         self._recorder: Optional[CsvRecorder] = None
         self._settings_dialog: Optional[SettingsDialog] = None
         self._status_key = STATUS_OK
