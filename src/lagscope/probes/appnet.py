@@ -14,7 +14,9 @@ from __future__ import annotations
 
 import ipaddress
 import logging
+import os
 import socket
+import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -99,6 +101,48 @@ def _process_names() -> dict:
 UNOWNED_PIDS = (0,)
 
 
+# Measuring this program with itself. Its connections are its own probes - the
+# handshakes it makes to time other things - so the "app" is busiest exactly
+# while it is measuring, has nothing at all between rounds, and every figure it
+# produces is a measurement of the measurement. It also reliably appears near
+# the top of the list, for the same reason, which is how it gets picked.
+SELF_ERROR = "self"
+
+
+def own_process() -> tuple:
+    """``(pids, name)`` for this program.
+
+    Two pids, when frozen: a PyInstaller one-file build is a small launcher
+    process that unpacks and starts the real one, both under the same name, and
+    the launcher holds no sockets but is still this program.
+    """
+    pids = {os.getpid()}
+    name = ""
+    if psutil is None:
+        return pids, name
+    try:
+        me = psutil.Process()
+        name = me.name() or ""
+        parent = me.parent()
+        if parent is not None and name and parent.name() == name:
+            pids.add(parent.pid)
+    except Exception:  # pragma: no cover - access denied, process gone
+        LOG.debug("could not inspect own process", exc_info=True)
+    return pids, name
+
+
+def is_self(process_name: str) -> bool:
+    """Whether ``process_name`` is this program.
+
+    Only for a frozen build. Running from source, this program is "python.exe",
+    and refusing every Python program on the machine would be wrong.
+    """
+    if not process_name or not getattr(sys, "frozen", False):
+        return False
+    _pids, name = own_process()
+    return bool(name) and process_name.lower() == name.lower()
+
+
 def list_apps(min_connections: int = 1) -> list:
     """Applications that currently hold network connections, busiest first."""
     if psutil is None:
@@ -110,9 +154,12 @@ def list_apps(min_connections: int = 1) -> list:
         return []
 
     names = _process_names()
+    mine, _name = own_process()
     grouped: dict = {}
     for entry in connections:
         if entry.pid is None or entry.pid in UNOWNED_PIDS or not entry.raddr:
+            continue
+        if entry.pid in mine:
             continue
         name = names.get(entry.pid) or f"pid {entry.pid}"
         pids, count = grouped.get(name, (set(), 0))
@@ -185,6 +232,9 @@ class AppNetProbe:
             return AppMeasurement(error="no-app")
         if psutil is None:
             return AppMeasurement(process=process_name, error="psutil unavailable")
+        if is_self(process_name):
+            # Saved before the list stopped offering it, most likely.
+            return AppMeasurement(process=process_name, error=SELF_ERROR)
 
         peers = peers_for(process_name)
         if not peers:

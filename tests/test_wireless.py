@@ -193,8 +193,9 @@ def test_a_slower_band_is_identified():
     verdict = edge_verdict(by_link(buckets), prefix="link")
 
     assert verdict.key == "link.differs" and verdict.matters
-    assert verdict.best.host == "Home (5 GHz)"
-    assert verdict.worst.host == "Home (2.4 GHz)"
+    # One router, two bands: one letter, and the band is what tells them apart.
+    assert verdict.best.host == "Wi-Fi A (5 GHz)"
+    assert verdict.worst.host == "Wi-Fi A (2.4 GHz)"
     assert verdict.difference_ms == pytest.approx(750.0)
 
 

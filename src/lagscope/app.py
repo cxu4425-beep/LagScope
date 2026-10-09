@@ -35,6 +35,7 @@ from .recording import CsvRecorder
 from .report import (
     build_html, build_text, default_report_path, write_report,
 )
+from .selftest import redact_home
 from .single_instance import SingleInstance
 from .update import RELEASES_PAGE, UpdateInfo, check as check_for_update
 from .web import DashboardServer
@@ -56,6 +57,7 @@ HISTORY_FLUSH_INTERVAL_MS = 60_000
 # Probe error codes that have a sentence a person can act on.
 ERROR_MESSAGES = {
     "no-connections": "status.no_connections",
+    "self": "status.self",
     "no-reply": "status.no_reply",
     "unreachable": "status.unreachable",
     "no-app": "status.no_app",
@@ -63,6 +65,25 @@ ERROR_MESSAGES = {
     "no-room": "status.no_room",
 }
 MAX_CLIPBOARD_CHARS = 4096
+
+
+def _shareable_sample(sample) -> Optional[dict]:
+    """The last sample as the diagnostics dump shows it.
+
+    The dump is copied to be pasted into a bug report, so it gets the same
+    treatment as the report itself: the band survives, the network's name and
+    the access point's hardware address do not. Neither says anything about
+    latency that the band and signal strength do not already say.
+    """
+    if sample is None:
+        return None
+    from .probes.path import public_link_label
+
+    data = sample.to_dict()
+    if "link" in data:
+        data["link"] = public_link_label(data.get("link") or "")
+    data.pop("bssid", None)
+    return data
 
 
 class MonitorApplication(QObject):
@@ -940,12 +961,15 @@ class MonitorApplication(QObject):
         again: the history already has it, and a second subprocess to learn
         something already written down would be waste.
         """
+        from .probes.path import split_link_key
+
         for bucket in reversed(self._history.buckets(1) or ()):
             link = getattr(bucket, "link", "") or ""
-            if "2.4" in link:
-                return "2.4"
             if link:
-                return "5" if "5 GHz" in link else ""
+                # From the suffix, not a substring search: a network named
+                # "Home2.4" can be on 5 GHz.
+                band = split_link_key(link)[1]
+                return band if band in ("2.4", "5") else ""
         return ""
 
     def _run_selftest(self) -> None:
@@ -1389,7 +1413,10 @@ class MonitorApplication(QObject):
             "p95_ms": self._stats.percentile(95),
             "jitter_ms": self._stats.jitter(),
             "failure_rate": self._stats.failure_rate(),
-            "last_sample": sample.to_dict() if sample else None,
+            "last_sample": _shareable_sample(sample),
+            # What cannot be measured right now - the first thing to know
+            # about a pasted dump, and the thing it most needs to explain.
+            "health": [item.as_dict() for item in HEALTH.current()],
             "display": self._display.snapshot(
                 self._config.display.frames_in_flight, self._config.display.manual_offset_ms
             ),
@@ -1417,7 +1444,9 @@ class MonitorApplication(QObject):
                 "area": self._room_info.area,
                 "live_seconds": self._room_info.live_seconds(),
             },
-            "config_dir": str(app_config_dir()),
+            # The account name is part of the path; this gets pasted into
+            # bug reports.
+            "config_dir": redact_home(app_config_dir()),
         }
         return json.dumps(payload, indent=2, ensure_ascii=False)
 

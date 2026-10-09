@@ -206,8 +206,19 @@ def by_link(buckets: Sequence) -> List[EdgeStats]:
     The same shape of question as by_edge, and worth asking for the same
     reason: people move between a 2.4 GHz and a 5 GHz network with the same
     name without ever choosing to, and the two behave nothing alike.
+
+    Returned under anonymous labels ("Wi-Fi A (5 GHz)") rather than network
+    names, because every place this ends up - the report, the history window,
+    the advice - is somewhere people copy from to share.
     """
-    return _group_by(buckets, "link")
+    from .probes.path import public_link_labels
+
+    stats = _group_by(buckets, "link")
+    by_use = sorted(stats, key=lambda item: item.share_pct, reverse=True)
+    labels = public_link_labels(item.host for item in by_use)
+    for item in stats:
+        item.host = labels.get(item.host, item.host)
+    return stats
 
 
 @dataclass

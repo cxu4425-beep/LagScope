@@ -426,6 +426,55 @@ def first_external_hop(target: str, timeout_s: float = 1.0) -> Optional[tuple]:
 
 
 # --------------------------------------------------------------------- Wi-Fi
+# "<ssid> (<band> GHz)", as link_key writes it. Parsed from the end, because
+# the network name is chosen by whoever set up the router and can contain
+# anything, brackets and "GHz" included.
+_LINK_KEY = re.compile(r"^(?P<ssid>.*) \((?P<band>2\.4|5|6) GHz\)$")
+
+
+def split_link_key(key: str) -> tuple:
+    """``"Home (5 GHz)"`` -> ``("Home", "5")``; no band suffix -> ``(key, "")``."""
+    match = _LINK_KEY.match(key or "")
+    if match is None:
+        return key or "", ""
+    return match.group("ssid"), match.group("band")
+
+
+def public_link_labels(keys) -> dict:
+    """A label for each wireless link that does not say what it is called.
+
+    Everything that leaves this machine - the report, the diagnostics people
+    paste into a bug report - promises not to carry the Wi-Fi name, and the
+    name is not what the comparison needs anyway. What it needs is to tell the
+    links apart and to say which band each is on, so: "Wi-Fi A (5 GHz)".
+
+    Two bands of one router keep one letter between them, because "the same
+    network on the other band" is precisely the advice the comparison exists
+    to give. Letters go by the order given, so pass the most-used link first
+    and it is always A.
+    """
+    letters = {}
+    labels = {}
+    for key in keys:
+        if not key or key in labels:
+            continue
+        ssid, band = split_link_key(key)
+        if ssid not in letters:
+            index = len(letters)
+            letters[ssid] = (chr(ord("A") + index) if index < 26 else str(index + 1))
+        name = f"Wi-Fi {letters[ssid]}"
+        labels[key] = f"{name} ({band} GHz)" if band else name
+    return labels
+
+
+def public_link_label(key: str) -> str:
+    """One link on its own: only the band survives. ``""`` stays ``""``."""
+    if not key:
+        return ""
+    _ssid, band = split_link_key(key)
+    return f"Wi-Fi ({band} GHz)" if band else "Wi-Fi"
+
+
 def _mac(text: str) -> str:
     """A MAC address in one lowercase form, or nothing at all."""
     match = re.search(r"(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2}", text or "")

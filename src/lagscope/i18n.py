@@ -81,6 +81,11 @@ STRINGS: dict[str, tuple[str, str, str]] = {
     "status.no_connections": (
         "该应用当前没有网络连接", "該應用目前沒有網路連線", "That app has no connections right now",
     ),
+    "status.self": (
+        "正在测 LagScope 自己——它的连线只有它自己的测量。请在设置里选要测的程序",
+        "正在測 LagScope 自己——它的連線只有它自己的測量。請在設定裡選要測的程式",
+        "This is LagScope itself - its only connections are its own probes. Pick the app to measure in Settings",
+    ),
     "status.unreachable": ("目标无法连通", "目標無法連通", "Target unreachable"),
     "status.no_reply": (
         "该应用的服务器不回应探测（可能屏蔽了 ping）",
