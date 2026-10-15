@@ -29,7 +29,7 @@ from lagscope.config import Config  # noqa: E402
 from lagscope.history import History  # noqa: E402
 from lagscope.i18n import set_language  # noqa: E402
 from lagscope.models import (  # noqa: E402
-    KIND_APP, KIND_TARGET, KIND_VIDEO, ExtraResult, LatencySample, RollingStats,
+    KIND_APP, KIND_NETWORK, KIND_TARGET, KIND_VIDEO, ExtraResult, LatencySample, RollingStats,
 )
 from lagscope.probes.display import DisplayProbe  # noqa: E402
 from lagscope.ui.icons import value_pixmap  # noqa: E402
@@ -81,16 +81,47 @@ def video_stats() -> tuple[LatencySample, RollingStats]:
     return sample, stats
 
 
+def internet_stats() -> tuple[LatencySample, RollingStats]:
+    """The default view: the internet itself, nothing configured."""
+    stats = RollingStats(120)
+    sample = LatencySample()
+    rng = random.Random(5)
+    for index in range(60):
+        lost = index == 37
+        total = 13 + math.sin(index / 6.0) * 2 + rng.random() * 3
+        sample = LatencySample(
+            network_ms=None if lost else total,
+            total_ms=None if lost else total,
+            ok=not lost,
+            estimated=False,
+            kind=KIND_NETWORK,
+            method="tcp",
+            host="1.1.1.1:443",
+            title="Cloudflare 1.1.1.1",
+            rtt_to_edge=True,
+            up_mbps=1.9,
+            down_mbps=48.3,
+        )
+        stats.append(sample)
+    sample = LatencySample(network_ms=14.0, total_ms=14.0, ok=True, estimated=False,
+                           kind=KIND_NETWORK, method="tcp", host="1.1.1.1:443",
+                           title="Cloudflare 1.1.1.1", rtt_to_edge=True,
+                           up_mbps=1.9, down_mbps=48.3)
+    stats.append(sample)
+    return sample, stats
+
+
 def app_stats() -> tuple[LatencySample, RollingStats]:
     stats = RollingStats(120)
     sample = LatencySample()
     for index in range(60):
-        total = 42 + math.sin(index / 5.0) * 9 + (index % 4)
+        total = 9 + math.sin(index / 5.0) * 3 + (index % 4)
         sample = LatencySample(
-            network_ms=total - 33.2,
+            network_ms=total,
             display_ms=33.2,
             total_ms=total,
             ok=True,
+            estimated=False,
             kind=KIND_APP,
             method="tcp",
             host="93.184.216.34:443",
@@ -211,11 +242,12 @@ def main() -> int:
     shoot_overlay("overlay-video.png", Config(), video_sample, video_series,
                   label="影片 【4K】測試影片標題 P2")
 
+    internet_sample, internet_series = internet_stats()
+    shoot_overlay("overlay-internet.png", Config(), internet_sample, internet_series,
+                  label="網路連線", extras=DEMO_EXTRAS[:1])
+
     app_sample, app_series = app_stats()
-    app_config = Config()
-    app_config.thresholds.good_ms = 60
-    app_config.thresholds.warn_ms = 150
-    shoot_overlay("overlay-app.png", app_config, app_sample, app_series,
+    shoot_overlay("overlay-app.png", Config(), app_sample, app_series,
                   label="應用程式 ValorantGame.exe", extras=DEMO_EXTRAS)
 
     history_config = Config()
@@ -237,7 +269,8 @@ def main() -> int:
     wizard.close()
 
     dialog = SettingsDialog(Config())
-    dialog.room_edit.setText("https://live.bilibili.com/21452505")
+    dialog.load_from(Config())
+    dialog.resize(640, 760)
     dialog.show()
     QApplication.processEvents()
     dialog.grab().save(str(OUT / "settings.png"), "PNG")
@@ -247,7 +280,7 @@ def main() -> int:
     strip.fill()
     painter = QPainter(strip)
     for index, (text, color) in enumerate(
-        [("82", "#3fd07f"), ("480", "#3fd07f"), ("2.4s", "#f6c445"), ("12s", "#ff5d5d")]
+        [("14", "#3fd07f"), ("62", "#3fd07f"), ("120", "#f6c445"), ("380", "#ff5d5d")]
     ):
         painter.drawPixmap(index * 96, 0, value_pixmap(text, color, 96))
     painter.end()

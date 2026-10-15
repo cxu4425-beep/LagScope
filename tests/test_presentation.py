@@ -112,8 +112,7 @@ def test_the_tray_tooltip_for_a_stream_keeps_its_breakdown():
 def test_the_internet_anchor_is_named_not_shown_as_an_address_and_port():
     sample = LatencySample(ok=True, total_ms=14.0, network_ms=14.0, kind=KIND_NETWORK,
                            host="1.1.1.1:443", title="Cloudflare 1.1.1.1", rtt_to_edge=True)
-    line = presentation.server_line(sample)
-    assert line.startswith("Cloudflare 1.1.1.1") and ":443" not in line
+    assert presentation.server_line(sample) == "Cloudflare 1.1.1.1"
 
 
 def test_an_app_server_is_still_shown_by_address():

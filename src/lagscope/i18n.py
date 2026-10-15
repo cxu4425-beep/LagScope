@@ -567,9 +567,16 @@ STRINGS: dict[str, tuple[str, str, str]] = {
     "advanced.warn": ("B 站直播延迟：黄色到", "B 站直播延遲：黃色到", "Bilibili stream delay: yellow up to"),
 
     "about.body": (
-        "开源、免费、无需登录。测量哔哩哔哩直播从服务器到客户端再到画面的延迟。",
-        "開源、免費、無需登入。測量嗶哩嗶哩直播從伺服器到用戶端再到畫面的延遲。",
-        "Free and open source, no login required. Measures Bilibili live delay from server to client to screen.",
+        "开源、免费、无需登录、不收集数据。常驻显示你的网络延迟、丢包与上传／下载速度，"
+        "统计流量用量，测网速，并告诉你卡顿是家里、电信商还是服务器的问题。"
+        "也能测任意程序或服务器，对 B 站直播／视频另有深度支持。",
+        "開源、免費、無需登入、不收集資料。常駐顯示你的網路延遲、丟包與上傳／下載速度，"
+        "統計流量用量，測網速，並告訴你卡頓是家裡、電信商還是伺服器的問題。"
+        "也能測任意程式或伺服器，對 B 站直播／影片另有深度支援。",
+        "Free, open source, no login, no data collected. Keeps your latency, packet loss and "
+        "upload / download speed in view, counts data usage, tests your speed, and tells you "
+        "whether a stutter is your home network, your provider or the server. Works for any "
+        "program or server, with deep support for Bilibili streams.",
     ),
     "about.repo": ("项目主页", "專案首頁", "Project page"),
     "about.version": ("版本", "版本", "Version"),

@@ -86,14 +86,18 @@ def server_line(sample) -> str:
 
     The internet anchor is named ("Cloudflare 1.1.1.1") rather than shown as an
     address and port: "1.1.1.1:443" means nothing to most people, and the
-    company running it is the part they would recognise.
+    company running it is the part they would recognise. It gets no distance
+    ceiling either: an anycast address is answered by whichever site is
+    nearest, so "within 1,400 km" says nothing anyone would act on - and on a
+    small card it pushed the name itself off the end.
     """
     from .probes.cdninfo import locate_line
 
     if sample is None or not sample.host:
         return ""
-    name = sample.title if (sample.kind == KIND_NETWORK and sample.title) else sample.host
-    return locate_line(name, sample.network_ms, sample.rtt_to_edge)
+    if sample.kind == KIND_NETWORK and sample.title:
+        return sample.title
+    return locate_line(sample.host, sample.network_ms, sample.rtt_to_edge)
 
 
 def breakdown_rows(sample, stats=None, audio_offset_ms: float = 0.0) -> List[tuple]:

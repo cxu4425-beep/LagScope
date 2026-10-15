@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LagScope · 卡的時候，它告訴你是誰的錯</title>
-<meta name="description" content="LagScope 是一個桌面延遲監視器：卡的時候，它告訴你是誰的錯。拆開你到伺服器的每一段，指出問題在哪一段，然後告訴你能做什麼。">
+<meta name="description" content="LagScope 是一個免費的桌面網路監視器：常駐顯示延遲、丟包、上傳／下載速度和流量用量，內建測速；卡的時候，它告訴你是 Wi-Fi、家裡網路、電信商還是伺服器的錯。">
 <link rel="canonical" href="https://cxu4425-beep.github.io/LagScope/">
 <link rel="icon" href="icon.png" type="image/png">
 <link rel="apple-touch-icon" href="icon.png">
@@ -14,12 +14,12 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="LagScope">
 <meta property="og:title" content="LagScope · 卡的時候，它告訴你是誰的錯">
-<meta property="og:description" content="LagScope 是一個桌面延遲監視器：卡的時候，它告訴你是誰的錯。拆開你到伺服器的每一段，指出問題在哪一段，然後告訴你能做什麼。">
+<meta property="og:description" content="LagScope 是一個免費的桌面網路監視器：常駐顯示延遲、丟包、上傳／下載速度和流量用量，內建測速；卡的時候，它告訴你是 Wi-Fi、家裡網路、電信商還是伺服器的錯。">
 <meta property="og:url" content="https://cxu4425-beep.github.io/LagScope/">
 <meta property="og:image" content="https://cxu4425-beep.github.io/LagScope/icon.png">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="LagScope · 卡的時候，它告訴你是誰的錯">
-<meta name="twitter:description" content="LagScope 是一個桌面延遲監視器：卡的時候，它告訴你是誰的錯。拆開你到伺服器的每一段，指出問題在哪一段，然後告訴你能做什麼。">
+<meta name="twitter:description" content="LagScope 是一個免費的桌面網路監視器：常駐顯示延遲、丟包、上傳／下載速度和流量用量，內建測速；卡的時候，它告訴你是 Wi-Fi、家裡網路、電信商還是伺服器的錯。">
 <meta name="twitter:image" content="https://cxu4425-beep.github.io/LagScope/icon.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -488,11 +488,11 @@ footer { padding: 20px 0 72px; }
     <div>
       <h1>卡的時候，<br>它告訴你<em>是誰的錯</em>。</h1>
       <p class="hero-sub">
-        <b>遊戲突然延遲？直播一直轉圈？影片卡住不動？</b>
+        <b>遊戲突然延遲？通話斷斷續續？影片一直轉圈？</b>
         LagScope 幫你找出問題是在你的 Wi-Fi、家裡的網路、電信商，還是對方的伺服器。
       </p>
       <p class="small" style="margin-top:14px;max-width:54ch">
-        它是一個一直開著的桌面小程式，不是網頁測速——因為卡頓通常不是「現在測一次」看得出來的。
+        打開就能用，什麼都不用填：它自動挑離你最近的公共伺服器量延遲，同時顯示丟包、上傳／下載速度和今天用了多少流量，還能一鍵測網速（含上傳與滿載延遲）。它是一個一直開著的桌面小程式，因為卡頓通常不是「現在測一次」看得出來的。
       </p>
 
       <div class="cta-row">
@@ -506,9 +506,9 @@ footer { padding: 20px 0 72px; }
 
     <div>
       <div class="readout" role="img"
-           aria-label="LagScope 的懸浮視窗讀數：總延遲 142 毫秒，狀態良好，串流 96 毫秒、顯示 46 毫秒，下載 46.8M、上傳 1.8M。">
+           aria-label="LagScope 的懸浮視窗讀數：網路延遲 14 毫秒，狀態良好，下載 46.8 Mbps、上傳 1.8 Mbps、丟包 0%。">
         <div class="readout-top">
-          <span class="readout-value mono" id="ms">142</span>
+          <span class="readout-value mono" id="ms">14</span>
           <span class="readout-unit">ms</span>
           <span class="readout-verdict">● 良好</span>
         </div>
@@ -518,17 +518,17 @@ footer { padding: 20px 0 72px; }
                 stroke-linejoin="round" stroke-linecap="round" d=""></path>
         </svg>
         <div class="readout-stats">
-          <span>串流 <b>96 ms</b></span>
-          <span>顯示 <b>46 ms</b></span>
           <span>↓<b>46.8M</b></span>
           <span>↑<b>1.8M</b></span>
-          <span>P95 <b>171 ms</b></span>
+          <span>丟包 <b>0%</b></span>
+          <span>P95 <b>19 ms</b></span>
+          <span>今天 <b>1.5 GB</b></span>
         </div>
       </div>
       <dl class="legend">
-        <div><dt>總延遲</dt><dd>從伺服器到你眼睛看到畫面，總共慢了多久</dd></div>
-        <div><dt>串流</dt><dd>資料在網路上跑掉的時間</dd></div>
-        <div><dt>顯示</dt><dd>你電腦把畫面畫出來的時間</dd></div>
+        <div><dt>延遲</dt><dd>封包到最近的公共伺服器跑一趟來回要多久，跟 ping 印出來的一樣</dd></div>
+        <div><dt>↓ ↑</dt><dd>整台電腦現在的下載和上傳速度</dd></div>
+        <div><dt>丟包</dt><dd>最近有幾成的探測完全沒有回應</dd></div>
         <div><dt>P95</dt><dd>比較糟的那些時候大概有多糟（不是最糟的一次，是常態的壞情況）</dd></div>
       </dl>
       <p class="readout-caption">
@@ -780,8 +780,12 @@ footer { padding: 20px 0 72px; }
         <span class="a yes">適合</span>
       </div>
       <div class="fit">
+        <span class="q">想隨時看到網速、丟包，和這個月用了多少流量</span>
+        <span class="a yes">適合<span class="why">打開就有，什麼都不用設定</span></span>
+      </div>
+      <div class="fit">
         <span class="q">B 站直播、影片偶爾卡一下，測速卻永遠正常</span>
-        <span class="a yes">最適合<span class="why">這個程式就是為了這件事寫的</span></span>
+        <span class="a yes">最適合<span class="why">對 B 站另有深度支援：量到「伺服器 → 電腦 → 螢幕」</span></span>
       </div>
       <div class="fit">
         <span class="q">想拿證據去跟電信商客服講，而不是「我覺得很慢」</span>
@@ -789,7 +793,7 @@ footer { padding: 20px 0 72px; }
       </div>
       <div class="fit">
         <span class="q">只是想知道現在網速多少，測一次就好</span>
-        <span class="a no">不用<span class="why">一般測速網站就夠了，不需要多裝一個常駐程式</span></span>
+        <span class="a no">可以，但不必<span class="why">內建測速會連上傳和滿載延遲一起測；只測一次的話，一般測速網站也夠了</span></span>
       </div>
       <div class="fit">
         <span class="q">網路一直都很穩，只是好奇</span>
@@ -875,11 +879,11 @@ footer { padding: 20px 0 72px; }
 
   var vals = [], i;
   for (i = 0; i < N; i++) {
-    var base = 96 + Math.sin(i / 7) * 9 + (rnd() - 0.5) * 16;
-    if (i > 38 && i < 45) base += 130 * Math.exp(-Math.abs(i - 41) / 1.9);
+    var base = 14 + Math.sin(i / 7) * 2 + (rnd() - 0.5) * 5;
+    if (i > 38 && i < 45) base += 55 * Math.exp(-Math.abs(i - 41) / 1.9);
     vals.push(base);
   }
-  var lo = 60, hi = 250;
+  var lo = 5, hi = 80;
   function x(k) { return (k / (N - 1)) * W; }
   function y(v) { return H - ((Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * (H - 6) - 3; }
 
@@ -901,7 +905,7 @@ footer { padding: 20px 0 72px; }
     el.style.strokeDashoffset = "0";
 
     /* The readout settles on its value the way the real one does. */
-    var out = document.getElementById("ms"), steps = [118, 173, 129, 151, 142], k = 0;
+    var out = document.getElementById("ms"), steps = [21, 38, 17, 15, 14], k = 0;
     var tick = setInterval(function () {
       out.textContent = steps[k++];
       if (k >= steps.length) clearInterval(tick);

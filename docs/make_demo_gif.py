@@ -31,7 +31,10 @@ from PIL import Image  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from lagscope.config import Config  # noqa: E402
-from lagscope.models import KIND_TARGET, ExtraResult, LatencySample, RollingStats  # noqa: E402
+from lagscope.i18n import set_language  # noqa: E402
+from lagscope.models import (  # noqa: E402
+    KIND_NETWORK, KIND_TARGET, ExtraResult, LatencySample, RollingStats,
+)
 from lagscope.probes.display import DisplayProbe  # noqa: E402
 from lagscope.ui.overlay import OverlayWindow  # noqa: E402
 
@@ -47,18 +50,23 @@ EXTRAS = [
 ]
 
 
+def load(index: int) -> float:
+    """0 when the line is quiet, up to 1 while someone in the house downloads."""
+    if 26 <= index < 42:
+        return math.sin((index - 26) / 16.0 * math.pi)
+    return 0.0
+
+
 def story(index: int) -> float:
     """A calm stretch, a spike that pushes it into the red, then recovery.
 
-    Showing only the calm part would be a worse advertisement than showing
-    what the thing is actually for.
+    The spike comes with the download speed shooting up - someone started a
+    download - while the router beside it stays green: the whole point of
+    the app on one card. Showing only the calm part would be a worse
+    advertisement than showing what the thing is actually for.
     """
-    calm = 1750 + math.sin(index / 5.0) * 180
-    if 26 <= index < 42:
-        # Something goes wrong, peaks, and comes back.
-        peak = math.sin((index - 26) / 16.0 * math.pi)
-        return calm + peak * 5200
-    return calm
+    calm = 14 + math.sin(index / 5.0) * 3
+    return calm + load(index) * 210
 
 
 def frame_image(window: OverlayWindow, scratch: Path, index: int) -> Image.Image:
@@ -71,6 +79,7 @@ def frame_image(window: OverlayWindow, scratch: Path, index: int) -> Image.Image
 
 def main() -> int:
     app = QApplication.instance() or QApplication([])
+    set_language("zh_TW")
     OUT.parent.mkdir(parents=True, exist_ok=True)
 
     config = Config()
@@ -78,25 +87,26 @@ def main() -> int:
     window = OverlayWindow(config, DisplayProbe())
     window.show()
     window.set_extras(EXTRAS)
-    window.set_room_label("房间 21452505")
+    window.set_room_label("網路連線")
 
     stats = RollingStats(120)
     random.seed(11)
     scratch = Path(tempfile.mkdtemp(prefix="lagscope-frames-"))
     images = []
     for index in range(FRAMES):
-        total = story(index) + random.random() * 90
+        total = story(index) + random.random() * 4
         sample = LatencySample(
-            network_ms=38 + (index % 5) * 2,
-            stream_ms=total - 33.2,
-            display_ms=33.2,
+            network_ms=total,
             total_ms=total,
             ok=True,
             estimated=False,
-            method="hls-pdt",
-            host="cn-hbyc-ct-01.bilivideo.com",
-            down_mbps=44.0 + random.random() * 6,
-            up_mbps=1.8,
+            kind=KIND_NETWORK,
+            method="tcp",
+            host="1.1.1.1:443",
+            title="Cloudflare 1.1.1.1",
+            rtt_to_edge=True,
+            down_mbps=2.5 + random.random() * 1.5 + load(index) * 88.0,
+            up_mbps=0.4 + random.random() * 0.3,
         )
         stats.append(sample)
         window.update_sample(sample, stats)
