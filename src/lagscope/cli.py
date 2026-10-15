@@ -341,19 +341,25 @@ def _diagnose(config, host: str) -> int:
 
 def _diagnosis_host(config) -> str:
     """What to diagnose when the user did not name a host."""
-    from .models import KIND_APP, KIND_TARGET
+    from .models import KIND_APP, KIND_NETWORK, KIND_TARGET
 
     target = _probe_target(config)
     if target.kind == KIND_TARGET:
         return target.ident
+    if target.kind == KIND_NETWORK:
+        # The nearest internet anchor, as the monitor itself would measure.
+        from .probes.internet import ANCHORS, InternetProbe
+
+        anchor = InternetProbe().choose() or ANCHORS[0]
+        return anchor.host
     if target.kind == KIND_APP:
         from .probes.appnet import peers_for
 
         peers = peers_for(target.ident)
         if peers:
             return peers[0].ip
-    # Anything else (a Bilibili room, a video, network-only) is reached through
-    # the same line, so the API host is a fair stand-in.
+    # A Bilibili room or video is reached through the same line, so the API
+    # host is a fair stand-in.
     return config.probe.rtt_host
 
 

@@ -151,3 +151,18 @@ def test_the_default_anchors_are_public_anycast_on_443():
     assert all(anchor.port == 443 for anchor in ANCHORS)
     # No single country's blocking can take all of them out.
     assert {"1.1.1.1", "223.5.5.5"} <= {anchor.host for anchor in ANCHORS}
+
+
+def test_a_network_check_in_internet_mode_traces_the_anchor_not_bilibili():
+    """The diagnosis is of the path the headline number travels."""
+    from lagscope.config import Config
+    from lagscope.models import KIND_NETWORK, WatchTarget
+    from lagscope.monitor import MonitorWorker
+
+    config = Config()
+    worker = MonitorWorker(config)
+    worker._target = WatchTarget(kind=KIND_NETWORK, source="manual")
+    worker._internet._chosen = Anchor("223.5.5.5", 443, "AliDNS")
+
+    assert worker._diagnosis_host(config) == "223.5.5.5"
+    assert "bilibili" not in worker._diagnosis_host(config)

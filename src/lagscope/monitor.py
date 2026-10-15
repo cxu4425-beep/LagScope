@@ -26,7 +26,7 @@ from .models import (
 from .probes.appnet import AppNetProbe
 from .probes.netspeed import NetSpeedProbe
 from .presentation import is_network_kind
-from .probes.internet import InternetProbe
+from .probes.internet import ANCHORS, InternetProbe
 from .probes.network import HttpClient, icmp_ping_ms, tcp_rtt_ms
 from .probes.path import WifiInfo, wifi_info
 from .probes.stream import RoomInfo, StreamProbe
@@ -267,6 +267,12 @@ class MonitorWorker(QObject):
                     sample_host = self._stream.current_host
                 if sample_host:
                     return sample_host
+            if target.kind == KIND_NETWORK:
+                # The anchor the headline number is measured against - not the
+                # Bilibili API, which someone watching their connection has
+                # never heard of and whose path may share nothing with theirs.
+                anchor = self._internet.anchor or ANCHORS[0]
+                return anchor.host
         return config.probe.rtt_host
 
     def _resolve_url(self, url: str) -> Optional[str]:
