@@ -452,3 +452,17 @@ def test_a_failure_says_why(monkeypatch):
     assert clicker.play() is False
     assert "not available" in clicker.last_error
     clicker.close()
+
+
+def test_headphones_do_not_delay_a_round_trip():
+    """The offset belongs in how late a stream reaches your ears. It has
+    nothing to do with how long a packet takes to come back, and a ping with
+    170 ms added would disagree with every other tool on the machine."""
+    from lagscope.models import KIND_APP, KIND_NETWORK, KIND_TARGET
+
+    config = Config()
+    config.audio.offset_ms = 170.0
+    for kind in (KIND_NETWORK, KIND_APP, KIND_TARGET):
+        out = _with_audio(config, LatencySample(total_ms=20.0, kind=kind))
+        assert out.total_ms == 20.0, kind
+        assert out.audio_ms == 170.0          # still reported, just not added

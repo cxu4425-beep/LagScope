@@ -241,3 +241,34 @@ def test_the_wizard_is_never_shown_twice():
     assert config.setup_done is True
     # Reloading a saved config keeps the flag, which is what suppresses it.
     assert Config.from_dict(config.to_dict()).setup_done is True
+
+
+# ------------------------------------------------------------------ wizard
+def test_the_wizard_defaults_to_the_internet_and_adds_the_router(monkeypatch):
+    """Pressing Start without reading anything must give a working monitor."""
+    import os
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+
+    from lagscope.config import Config
+    from lagscope.ui import wizard as wizard_module
+
+    QApplication.instance() or QApplication([])
+    monkeypatch.setattr("lagscope.probes.path.default_gateway", lambda: "192.168.1.1")
+    config = wizard_module.SetupWizard(Config()).apply_to(Config())
+
+    assert config.manual_kind == "network" and not config.detect.enabled
+    assert config.setup_done
+    assert config.watch_extras[0]["ident"] == "192.168.1.1"
+
+
+def test_the_router_is_not_added_twice_or_when_there_is_none():
+    from lagscope.config import Config
+    from lagscope.ui.wizard import add_router
+
+    config = Config()
+    assert add_router(config, lambda: "10.0.0.1")
+    assert not add_router(config, lambda: "10.0.0.1")
+    assert len(config.watch_extras) == 1
+    assert not add_router(Config(), lambda: "")
+    assert not add_router(Config(), lambda: (_ for _ in ()).throw(OSError("no route")))
