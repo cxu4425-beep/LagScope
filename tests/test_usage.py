@@ -147,3 +147,27 @@ def test_the_tray_tooltip_ends_with_todays_usage():
     sample = LatencySample(ok=True, total_ms=12.0, kind=KIND_NETWORK)
     text = presentation.tooltip(sample, "", None, "LagScope", "Today ↓1 GB ↑1 MB")
     assert text.endswith("Today ↓1 GB ↑1 MB")
+
+
+def test_the_app_counts_every_sample_and_saves_with_the_history(monkeypatch, tmp_path):
+    import os
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtWidgets import QApplication
+
+    from lagscope import app as app_module
+    from lagscope.config import Config
+
+    qapp = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(app_module, "app_config_dir", lambda: tmp_path)
+    instance = app_module.MonitorApplication(qapp, Config())
+    try:
+        instance._on_sample(LatencySample(ok=True, total_ms=10.0, down_bytes=3_000_000,
+                                          up_bytes=40_000))
+        instance._on_sample(LatencySample(ok=True, total_ms=11.0, down_bytes=1_000_000,
+                                          up_bytes=10_000))
+        assert instance._usage.today() == (4_000_000, 50_000)
+        assert "4.00 MB" in instance._usage_line()
+        instance._flush_history()
+        assert UsageLedger(tmp_path / "usage.json").today() == (4_000_000, 50_000)
+    finally:
+        instance._history.close()
