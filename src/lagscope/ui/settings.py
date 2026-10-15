@@ -135,20 +135,30 @@ class SettingsDialog(QDialog):
 
         target_box = QGroupBox(tr("general.target"), page)
         target_form = QFormLayout(target_box)
+        self._target_form = target_form
 
+        # The general ones first; Bilibili's three are the specialist case.
+        # "network" must be in this list: a mode the dialog cannot show is a
+        # mode it silently replaces with whatever is first when OK is pressed.
         self.target_combo = QComboBox(target_box)
+        self.target_combo.addItem(tr("general.target.network"), "network")
+        self.target_combo.addItem(tr("general.target.app"), "app")
+        self.target_combo.addItem(tr("general.target.custom"), "target")
         self.target_combo.addItem(tr("general.target.auto"), "auto")
         self.target_combo.addItem(tr("general.target.live"), "live")
         self.target_combo.addItem(tr("general.target.video"), "video")
-        self.target_combo.addItem(tr("general.target.app"), "app")
-        self.target_combo.addItem(tr("general.target.custom"), "target")
         self.target_combo.currentIndexChanged.connect(self._sync_detect_state)
         target_form.addRow(tr("general.target"), self.target_combo)
+
+        self.network_hint = QLabel(tr("wizard.hint.network"), target_box)
+        self.network_hint.setWordWrap(True)
+        self.network_hint.setStyleSheet("color: palette(mid);")
+        target_form.addRow(self.network_hint)
 
         self.room_edit = QLineEdit(target_box)
         self.room_edit.setPlaceholderText("https://live.bilibili.com/21452505")
         target_form.addRow(tr("general.room"), self.room_edit)
-        room_hint = QLabel(tr("general.room_hint"), target_box)
+        room_hint = self._room_hint = QLabel(tr("general.room_hint"), target_box)
         room_hint.setWordWrap(True)
         room_hint.setStyleSheet("color: palette(mid);")
         target_form.addRow(room_hint)
@@ -156,7 +166,7 @@ class SettingsDialog(QDialog):
         self.video_edit = QLineEdit(target_box)
         self.video_edit.setPlaceholderText("https://www.bilibili.com/video/BV1GJ411x7h7")
         target_form.addRow(tr("general.video"), self.video_edit)
-        video_hint = QLabel(tr("general.video_hint"), target_box)
+        video_hint = self._video_hint = QLabel(tr("general.video_hint"), target_box)
         video_hint.setWordWrap(True)
         video_hint.setStyleSheet("color: palette(mid);")
         target_form.addRow(video_hint)
@@ -166,14 +176,14 @@ class SettingsDialog(QDialog):
         self.app_combo.setEditable(True)          # a game that is not running yet
         self.app_refresh_button = QPushButton(tr("general.app_refresh"), target_box)
         self.app_refresh_button.clicked.connect(self._reload_apps)
-        app_row = QHBoxLayout()
+        app_row = self._app_row = QHBoxLayout()
         app_row.addWidget(self.app_combo, 1)
         app_row.addWidget(self.app_refresh_button)
         target_form.addRow(tr("general.app_name"), app_row)
         self.app_follow_check = QCheckBox(tr("general.app_follow"), target_box)
         self.app_follow_check.toggled.connect(self._sync_target_state)
         target_form.addRow("", self.app_follow_check)
-        app_hint = QLabel(tr("general.app_hint"), target_box)
+        app_hint = self._app_hint = QLabel(tr("general.app_hint"), target_box)
         app_hint.setWordWrap(True)
         app_hint.setStyleSheet("color: palette(mid);")
         target_form.addRow(app_hint)
@@ -185,7 +195,7 @@ class SettingsDialog(QDialog):
         self.target_port_spin = QSpinBox(target_box)
         self.target_port_spin.setRange(1, 65535)
         target_form.addRow(tr("general.target_port"), self.target_port_spin)
-        target_hint = QLabel(tr("general.target_hint"), target_box)
+        target_hint = self._target_hint = QLabel(tr("general.target_hint"), target_box)
         target_hint.setWordWrap(True)
         target_hint.setStyleSheet("color: palette(mid);")
         target_form.addRow(target_hint)
@@ -817,6 +827,9 @@ class SettingsDialog(QDialog):
     def _sync_detect_state(self) -> None:
         mode = self.target_combo.currentData()
         auto = mode == "auto"
+        # Hidden rather than greyed out: a page of disabled Bilibili options is
+        # noise to everyone who is not watching Bilibili.
+        self._detect_box.setVisible(auto)
         self._detect_box.setEnabled(auto)
         self.detect_port_spin.setEnabled(auto and self.detect_bridge_check.isChecked())
         self._sync_target_state()
@@ -824,7 +837,18 @@ class SettingsDialog(QDialog):
     def _sync_target_state(self) -> None:
         """Only show the fields that matter for the chosen mode."""
         mode = self.target_combo.currentData()
-        bilibili = mode in ("auto", "live", "video")
+        form = self._target_form
+        rows = (
+            ((self.network_hint,), mode == "network"),
+            ((self.room_edit, self._room_hint), mode in ("auto", "live")),
+            ((self.video_edit, self._video_hint), mode in ("auto", "video")),
+            ((self._app_row, self.app_follow_check, self._app_hint), mode == "app"),
+            ((self.target_host_edit, self.target_port_spin, self._target_hint),
+             mode == "target"),
+        )
+        for members, visible in rows:
+            for member in members:
+                form.setRowVisible(member, visible)
         self.room_edit.setEnabled(mode in ("auto", "live"))
         self.video_edit.setEnabled(mode in ("auto", "video"))
         following = self.app_follow_check.isChecked()
@@ -833,7 +857,6 @@ class SettingsDialog(QDialog):
         self.app_follow_check.setEnabled(mode == "app")
         self.target_host_edit.setEnabled(mode == "target")
         self.target_port_spin.setEnabled(mode == "target")
-        del bilibili
 
     def _chosen_app(self) -> str:
         """The picker shows "name (sockets)"; the process name is the item data."""
@@ -864,9 +887,9 @@ class SettingsDialog(QDialog):
 
     def to_config(self) -> Config:
         config = copy.deepcopy(self._config)
-        mode = self.target_combo.currentData() or "auto"
+        mode = self.target_combo.currentData() or "network"
         config.detect.enabled = mode == "auto"
-        if mode in ("live", "video", "app", "target"):
+        if mode in ("network", "live", "video", "app", "target"):
             config.manual_kind = mode
         config.detect.use_client = self.detect_client_check.isChecked()
         config.detect.use_clipboard = self.detect_clipboard_check.isChecked()

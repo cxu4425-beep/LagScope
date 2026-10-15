@@ -178,11 +178,16 @@ STRINGS: dict[str, tuple[str, str, str]] = {
     "settings.tab.about": ("关于", "關於", "About"),
 
     "general.target": ("监测对象", "監測對象", "What to monitor"),
-    "general.target.auto": (
-        "自动跟随我正在看的页面", "自動跟隨我正在看的頁面", "Follow whatever I am watching",
+    "general.target.network": (
+        "我的网络连接（自动选最近的公共服务器）", "我的網路連線（自動選最近的公共伺服器）",
+        "My internet connection (nearest public server)",
     ),
-    "general.target.live": ("手动指定直播间", "手動指定直播間", "A live room I pick"),
-    "general.target.video": ("手动指定视频", "手動指定影片", "A video I pick"),
+    "general.target.auto": (
+        "B 站：自动跟随我正在看的页面", "B 站：自動跟隨我正在看的頁面",
+        "Bilibili: follow whatever I am watching",
+    ),
+    "general.target.live": ("B 站：手动指定直播间", "B 站：手動指定直播間", "Bilibili: a live room I pick"),
+    "general.target.video": ("B 站：手动指定视频", "B 站：手動指定影片", "Bilibili: a video I pick"),
     "general.target.app": ("任意应用程序（游戏／通话／浏览器…）", "任意應用程式（遊戲／通話／瀏覽器…）",
                            "Any application (games, calls, browsers…)"),
     "general.target.custom": ("自定义服务器地址", "自訂伺服器位址", "A server address I type"),
