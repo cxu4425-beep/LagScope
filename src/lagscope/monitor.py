@@ -25,6 +25,8 @@ from .models import (
 )
 from .probes.appnet import AppNetProbe
 from .probes.netspeed import NetSpeedProbe
+from .presentation import is_network_kind
+from .probes.internet import InternetProbe
 from .probes.network import HttpClient, icmp_ping_ms, tcp_rtt_ms
 from .probes.path import WifiInfo, wifi_info
 from .probes.stream import RoomInfo, StreamProbe
@@ -80,6 +82,7 @@ class MonitorWorker(QObject):
         self._last_switch = None
         self._extra_app = AppNetProbe()   # separate state: different target
         self._netspeed = NetSpeedProbe()
+        self._internet = InternetProbe()
         self._extra_index = 0
         # Reading the Wi-Fi state shells out; it also barely changes between
         # rounds, so it is cached and refreshed on WIFI_REFRESH_S.
@@ -555,7 +558,9 @@ class MonitorWorker(QObject):
 
         if measured <= 0.0:
             return sample
-        if not offset or sample.total_ms is None:
+        if not offset or sample.total_ms is None or is_network_kind(sample.kind):
+            # Headphones delay a stream someone is watching; they do not delay
+            # a packet's round trip, so a network number is left as measured.
             # Still worth reporting what was measured, even when the person has
             # chosen to keep it out of the headline number.
             return replace(sample, audio_ms=measured)
@@ -588,8 +593,11 @@ class MonitorWorker(QObject):
             # Timed against this very peer, so it can carry a distance.
             rtt_to_edge=True,
             display_ms=display_ms,
-            total_ms=measurement.rtt_ms + (display_component or 0.0),
+            # The round trip, as ping would print it. An estimated display
+            # delay added on top made this disagree with every other tool.
+            total_ms=measurement.rtt_ms,
             ok=True,
+            estimated=False,
             kind=KIND_APP,
             method=measurement.method,
             host=str(measurement.peer) if measurement.peer else "",
@@ -619,8 +627,9 @@ class MonitorWorker(QObject):
             # Timed against the address named below, so it can carry a distance.
             rtt_to_edge=True,
             display_ms=display_ms,
-            total_ms=rtt_ms + (display_component or 0.0),
+            total_ms=rtt_ms,
             ok=True,
+            estimated=False,
             kind=KIND_TARGET,
             method=method,
             host=f"{target.ident}:{port}",
@@ -630,20 +639,34 @@ class MonitorWorker(QObject):
 
     def _network_only_sample(self, config: Config, display_ms: Optional[float],
                              display_component: Optional[float], timeout_s: float) -> LatencySample:
-        rtt_ms = tcp_rtt_ms(config.probe.rtt_host, config.probe.rtt_port, timeout_s)
-        total = None if rtt_ms is None else rtt_ms + (display_component or 0.0)
-        self._emit_status(STATUS_NO_ROOM if rtt_ms is not None else STATUS_ERROR, "")
+        """Latency to the internet itself: the answer to "is my connection OK".
+
+        Measured against the nearest of a few anycast services rather than
+        anything Bilibili, because this is also what someone sees who has never
+        heard of Bilibili. The number is what ``ping`` would print: nothing
+        estimated is added to it.
+        """
+        result = self._internet.measure(timeout_s)
+        chosen = config.manual_kind == "network" and not config.detect.enabled
+        if result.ok:
+            # Deliberately watching the internet is a mode, not a missing room.
+            self._emit_status(STATUS_OK if chosen else STATUS_NO_ROOM, "")
+        else:
+            self._emit_status(STATUS_ERROR, "offline-net")
+        anchor = result.anchor
         return LatencySample(
-            network_ms=rtt_ms,
+            network_ms=result.rtt_ms,
+            rtt_to_edge=result.ok,
             display_ms=display_ms,
-            total_ms=total,
-            ok=rtt_ms is not None,
-            estimated=True,
+            total_ms=result.rtt_ms,
+            ok=result.ok,
+            estimated=False,
             kind=KIND_NETWORK,
-            method="network-only",
-            host=config.probe.rtt_host,
+            method=result.method,
+            host=anchor.endpoint if anchor else "",
+            title=anchor.label if anchor else "",
             source="manual",
-            error=None if rtt_ms is not None else "network unreachable",
+            error=None if result.ok else "offline-net",
         )
 
     def _compare_lines_if_due(self, timeout_s: float) -> None:

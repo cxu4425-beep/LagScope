@@ -197,7 +197,9 @@ class RecordingConfig:
 class DetectConfig:
     """Automatic detection of what you are watching (every source optional)."""
 
-    enabled: bool = True
+    # Off for a fresh install: following Bilibili pages is for people who
+    # asked for it, and everyone else would be told "detecting..." forever.
+    enabled: bool = False
     use_client: bool = True       # read the official desktop client's own data folder
     use_history: bool = True      # newest bilibili.com URL in the browser history
     use_titles: bool = True       # match it against open window titles (Windows)
@@ -264,8 +266,18 @@ class UpdateConfig:
 
 @dataclass
 class ThresholdConfig:
-    good_ms: float = 2000.0
+    """Where green turns yellow and yellow turns red.
+
+    Two scales, because two different things are measured. A Bilibili stream
+    is seconds behind live and 3 s is good; a network round trip is tens of
+    milliseconds and 300 ms is bad. One pair of numbers cannot serve both, and
+    with the stream pair applied to a ping every result would be green.
+    """
+
+    good_ms: float = 2000.0         # stream delay (Bilibili live / video)
     warn_ms: float = 5000.0
+    net_good_ms: float = 80.0       # network round trip (internet, app, address)
+    net_warn_ms: float = 150.0
 
 
 @dataclass
@@ -275,8 +287,10 @@ class Config:
     room_id: str = ""
     video_id: str = ""              # BV id (or avNNN), used when manual_kind is "video"
     video_page: int = 1             # which part (P) of that video
-    # live | video | app | target - what to watch when auto-detection is off
-    manual_kind: str = "live"
+    # network | live | video | app | target - what to watch when Bilibili
+    # auto-detection is off. A fresh install watches the internet connection
+    # itself, which needs nothing typed in; saved configs keep what they had.
+    manual_kind: str = "network"
     app_name: str = ""              # process to follow in "app" mode (e.g. game.exe)
     app_follow_foreground: bool = False   # or just follow whatever app is in front
     target_host: str = ""           # host to ping in "target" mode
@@ -359,6 +373,9 @@ class Config:
         # number is a mistake rather than a measurement.
         self.audio.offset_ms = _clamp(self.audio.offset_ms, 0.0, 500.0)
         self.audio.device_note = str(self.audio.device_note or "")[:80]
+        self.thresholds.net_good_ms = _clamp(self.thresholds.net_good_ms, 1.0, 10_000.0)
+        self.thresholds.net_warn_ms = _clamp(
+            self.thresholds.net_warn_ms, self.thresholds.net_good_ms, 10_000.0)
         self.thresholds.good_ms = _clamp(self.thresholds.good_ms, 10.0, 600_000.0)
         self.thresholds.warn_ms = _clamp(self.thresholds.warn_ms, self.thresholds.good_ms, 600_000.0)
         if self.overlay.anchor_mode not in ("free", "screen", "window"):
@@ -391,8 +408,8 @@ class Config:
         if self.web.bind_host not in ("0.0.0.0", "127.0.0.1"):
             self.web.bind_host = "0.0.0.0"
         self.watch_extras = _clean_extras(self.watch_extras)
-        if self.manual_kind not in ("live", "video", "app", "target"):
-            self.manual_kind = "live"
+        if self.manual_kind not in ("network", "live", "video", "app", "target"):
+            self.manual_kind = "network"
         self.target_port = int(_clamp(self.target_port, 1, 65535))
         self.target_host = str(self.target_host or "").strip()
         self.app_name = str(self.app_name or "").strip()

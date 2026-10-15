@@ -63,8 +63,10 @@ STRINGS: dict[str, tuple[str, str, str]] = {
     "label.connections": ("连接数", "連線數", "Sockets"),
     "label.app": ("应用", "應用", "App"),
     "label.target": ("目标", "目標", "Target"),
+    "label.internet": ("网络连接", "網路連線", "Internet"),
     "label.down": ("下载", "下載", "Down"),
     "label.up": ("上传", "上傳", "Up"),
+    "label.loss": ("丢包", "丟包", "Loss"),
     "label.measured": ("实测", "實測", "measured"),
     "label.estimated": ("估算", "估算", "estimated"),
     "label.auto": ("自动", "自動", "auto"),
@@ -80,6 +82,11 @@ STRINGS: dict[str, tuple[str, str, str]] = {
     "status.no_app": ("未选择应用", "未選擇應用", "No app selected"),
     "status.no_connections": (
         "该应用当前没有网络连接", "該應用目前沒有網路連線", "That app has no connections right now",
+    ),
+    "status.offline_net": (
+        "连不上网络：最近的几个公共服务器都没有回应",
+        "連不上網路：最近的幾個公共伺服器都沒有回應",
+        "No internet: none of the public servers answered",
     ),
     "status.self": (
         "正在测 LagScope 自己——它的连线只有它自己的测量。请在设置里选要测的程序",
@@ -549,8 +556,10 @@ STRINGS: dict[str, tuple[str, str, str]] = {
         "檔案位於設定目錄的 logs 子目錄，會自動輪替。",
         "Written to the logs folder next to the config, with rotation.",
     ),
-    "advanced.good": ("绿色阈值 (毫秒)", "綠色門檻 (毫秒)", "Good threshold (ms)"),
-    "advanced.warn": ("黄色阈值 (毫秒)", "黃色門檻 (毫秒)", "Warning threshold (ms)"),
+    "advanced.net_good": ("网络延迟：绿色到", "網路延遲：綠色到", "Network latency: green up to"),
+    "advanced.net_warn": ("网络延迟：黄色到", "網路延遲：黃色到", "Network latency: yellow up to"),
+    "advanced.good": ("B 站直播延迟：绿色到", "B 站直播延遲：綠色到", "Bilibili stream delay: green up to"),
+    "advanced.warn": ("B 站直播延迟：黄色到", "B 站直播延遲：黃色到", "Bilibili stream delay: yellow up to"),
 
     "about.body": (
         "开源、免费、无需登录。测量哔哩哔哩直播从服务器到客户端再到画面的延迟。",
@@ -581,6 +590,11 @@ STRINGS: dict[str, tuple[str, str, str]] = {
         "{title}\n影片總延遲 {total}\n網路 {network} / 起播 {stream} / 顯示 {display}\n頻寬 {speed}\n{status}",
         "{title}\nVideo total {total}\nNetwork {network} / Startup {stream} / Display {display}\n"
         "Speed {speed}\n{status}",
+    ),
+    "tray.tooltip_net": (
+        "{title}\n延迟 {total}   丢包 {loss}\n↓ {down}   ↑ {up}\n{status}",
+        "{title}\n延遲 {total}   丟包 {loss}\n↓ {down}   ↑ {up}\n{status}",
+        "{title}\nLatency {total}   Loss {loss}\n↓ {down}   ↑ {up}\n{status}",
     ),
     "tray.tooltip_app": (
         "{title}\n延迟 {total}\n服务器 {host}\n连接 {conns}   ↓{down} ↑{up}\n{status}",
@@ -1171,10 +1185,10 @@ STRINGS: dict[str, tuple[str, str, str]] = {
     "wizard.title": ("初次设置", "初次設定", "Setup"),
     "wizard.welcome": ("欢迎使用 {app}", "歡迎使用 {app}", "Welcome to {app}"),
     "wizard.blurb": (
-        "回答三个问题就能开始，其它都有合理的默认值，之后随时可以在设置里改。",
-        "回答三個問題就能開始，其它都有合理的預設值，之後隨時可以在設定裡改。",
-        "Three questions and you are running. Everything else has a sensible default "
-        "and can be changed later in Settings.",
+        "直接按「开始使用」就能用了：其它都有合理的默认值，之后随时可以在设置里改。",
+        "直接按「開始使用」就能用了：其它都有合理的預設值，之後隨時可以在設定裡改。",
+        "Press Start and it is running. Everything has a sensible default and can be "
+        "changed later in Settings.",
     ),
     "wizard.watch": ("① 要监测什么？", "① 要監測什麼？", "1. What should it watch?"),
     "wizard.watch.auto": (
@@ -1190,7 +1204,14 @@ STRINGS: dict[str, tuple[str, str, str]] = {
         "某个服务器地址", "某個伺服器位址", "A server address",
     ),
     "wizard.watch.network": (
-        "先只看整体网络就好", "先只看整體網路就好", "Just my connection in general, for now",
+        "我的网络连接（推荐，什么都不用填）", "我的網路連線（推薦，什麼都不用填）",
+        "My internet connection (recommended - nothing to fill in)",
+    ),
+    "wizard.hint.network": (
+        "自动挑离你最近的公共服务器（Cloudflare、Google、阿里 DNS…）测延迟，同时显示上传／下载速度，还会把你的路由器加进来一起看。",
+        "自動挑離你最近的公共伺服器（Cloudflare、Google、阿里 DNS…）測延遲，同時顯示上傳／下載速度，還會把你的路由器加進來一起看。",
+        "Pings the nearest public server (Cloudflare, Google, AliDNS...), shows your upload "
+        "and download speed, and watches your router alongside so you can tell home from internet.",
     ),
     "wizard.detail.app": ("程序名称", "程式名稱", "Program"),
     "wizard.detail.target": ("地址", "位址", "Address"),

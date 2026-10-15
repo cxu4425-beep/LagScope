@@ -45,8 +45,10 @@ JA: dict = {
     "label.connections": "接続数",
     "label.app": "アプリ",
     "label.target": "対象",
+    "label.internet": "インターネット",
     "label.down": "下り",
     "label.up": "上り",
+    "label.loss": "パケットロス",
     "label.measured": "実測",
     "label.estimated": "推定",
     "label.auto": "自動",
@@ -60,6 +62,7 @@ JA: dict = {
     "status.no_video": "動画が未設定です",
     "status.no_app": "アプリが未選択です",
     "status.no_connections": "そのアプリは現在ネットワークに接続していません",
+    "status.offline_net": "インターネットに接続できません：公開サーバーがどれも応答しません",
     "status.self": "LagScope 自身を測っています。接続は自分の測定だけです。設定で測りたいアプリを選んでください",
     "status.unreachable": "対象に到達できません",
     "status.no_reply": "そのアプリのサーバーは応答しません（ping が遮断されている可能性）",
@@ -300,8 +303,10 @@ JA: dict = {
     "server.ceiling_note": "上限であって推定値ではありません。まっすぐな光ファイバーと、まったく時間のかからない機器を仮定しています——どちらもあり得ないので、実際の距離は必ずこれより近くなります。",
     "advanced.csv": "サンプルを CSV に記録",
     "advanced.csv_hint": "設定フォルダー内の logs に保存され、自動でローテーションします。",
-    "advanced.good": "緑のしきい値（ミリ秒）",
-    "advanced.warn": "黄のしきい値（ミリ秒）",
+    "advanced.net_good": "ネットワーク遅延：緑の上限",
+    "advanced.net_warn": "ネットワーク遅延：黄の上限",
+    "advanced.good": "B站配信の遅延：緑の上限",
+    "advanced.warn": "B站配信の遅延：黄の上限",
 
     "about.body": "無料・オープンソース・ログイン不要。"
                   "B站の配信について、サーバーから PC、そして画面までの遅延を計測します。",
@@ -324,6 +329,7 @@ JA: dict = {
     "tray.tooltip_video": "{title}\n動画の合計 {total}\n"
                           "ネットワーク {network} / 再生開始 {stream} / 表示 {display}\n"
                           "帯域 {speed}\n{status}",
+    "tray.tooltip_net": "{title}\n遅延 {total}   ロス {loss}\n↓ {down}   ↑ {up}\n{status}",
     "tray.tooltip_app": "{title}\n遅延 {total}\nサーバー {host}\n"
                         "接続 {conns}   ↓{down} ↑{up}\n{status}",
 
@@ -384,13 +390,14 @@ JA: dict = {
 
     "wizard.title": "初期設定",
     "wizard.welcome": "{app} へようこそ",
-    "wizard.blurb": "3 つの質問に答えれば始められます。"
-                    "ほかは妥当な既定値で、あとから設定でいつでも変更できます。",
+    "wizard.blurb": "「開始」を押せばすぐ使えます。"
+                    "すべて妥当な既定値で、あとから設定でいつでも変更できます。",
     "wizard.watch": "① 何を計測しますか？",
     "wizard.watch.auto": "見ている B站の配信／動画（自動で追従）",
     "wizard.watch.app": "アプリ（ゲーム、通話、ブラウザーなど）",
     "wizard.watch.target": "サーバーアドレス",
-    "wizard.watch.network": "まずはネットワーク全体だけ",
+    "wizard.watch.network": "自分のインターネット接続（おすすめ・入力不要）",
+    "wizard.hint.network": "近くの公開サーバー（Cloudflare、Google、AliDNS など）を自動で選んで遅延を測り、アップロード／ダウンロード速度とルーターも一緒に表示します。",
     "wizard.detail.app": "アプリ名",
     "wizard.detail.target": "アドレス",
     "wizard.hint.auto": "ブラウザーでも公式 PC クライアントでも動き、配信を変えれば自動で切り替わります。",
@@ -693,8 +700,10 @@ KO: dict = {
     "label.connections": "연결 수",
     "label.app": "앱",
     "label.target": "대상",
+    "label.internet": "인터넷",
     "label.down": "다운",
     "label.up": "업",
+    "label.loss": "패킷 손실",
     "label.measured": "실측",
     "label.estimated": "추정",
     "label.auto": "자동",
@@ -708,6 +717,7 @@ KO: dict = {
     "status.no_video": "영상이 설정되지 않았습니다",
     "status.no_app": "앱이 선택되지 않았습니다",
     "status.no_connections": "이 앱은 현재 네트워크 연결이 없습니다",
+    "status.offline_net": "인터넷에 연결할 수 없습니다: 공용 서버가 하나도 응답하지 않습니다",
     "status.self": "LagScope 자신을 측정하고 있습니다. 연결은 자기 측정뿐입니다. 설정에서 측정할 앱을 고르세요",
     "status.unreachable": "대상에 연결할 수 없습니다",
     "status.no_reply": "이 앱의 서버가 응답하지 않습니다 (ping이 차단된 것일 수 있습니다)",
@@ -949,8 +959,10 @@ KO: dict = {
     "server.ceiling_note": "추정값이 아니라 상한입니다. 곧게 뻗은 광섬유와 전혀 시간이 걸리지 않는 장비를 가정합니다 — 둘 다 불가능하므로 실제 거리는 반드시 이보다 가깝습니다.",
     "advanced.csv": "샘플을 CSV로 기록",
     "advanced.csv_hint": "설정 폴더 안 logs에 저장되며 자동으로 순환됩니다.",
-    "advanced.good": "초록 임계값 (밀리초)",
-    "advanced.warn": "노랑 임계값 (밀리초)",
+    "advanced.net_good": "네트워크 지연: 초록 상한",
+    "advanced.net_warn": "네트워크 지연: 노랑 상한",
+    "advanced.good": "B站 방송 지연: 초록 상한",
+    "advanced.warn": "B站 방송 지연: 노랑 상한",
 
     "about.body": "무료·오픈소스·로그인 불필요. "
                   "B站 방송의 서버에서 PC를 거쳐 화면까지의 지연을 측정합니다.",
@@ -973,6 +985,7 @@ KO: dict = {
     "tray.tooltip_video": "{title}\n영상 총 지연 {total}\n"
                           "네트워크 {network} / 재생 시작 {stream} / 화면 {display}\n"
                           "대역폭 {speed}\n{status}",
+    "tray.tooltip_net": "{title}\n지연 {total}   손실 {loss}\n↓ {down}   ↑ {up}\n{status}",
     "tray.tooltip_app": "{title}\n지연 {total}\n서버 {host}\n"
                         "연결 {conns}   ↓{down} ↑{up}\n{status}",
 
@@ -1030,13 +1043,14 @@ KO: dict = {
 
     "wizard.title": "초기 설정",
     "wizard.welcome": "{app}에 오신 것을 환영합니다",
-    "wizard.blurb": "세 가지만 답하면 바로 시작합니다. "
-                    "나머지는 적당한 기본값이며 나중에 설정에서 언제든 바꿀 수 있습니다.",
+    "wizard.blurb": "「시작」을 누르면 바로 쓸 수 있습니다. "
+                    "모두 적당한 기본값이며 나중에 설정에서 언제든 바꿀 수 있습니다.",
     "wizard.watch": "① 무엇을 측정할까요?",
     "wizard.watch.auto": "내가 보고 있는 B站 방송／영상 (자동으로 따라감)",
     "wizard.watch.app": "어떤 앱 (게임, 음성, 브라우저 등)",
     "wizard.watch.target": "서버 주소",
-    "wizard.watch.network": "우선 네트워크 전체만",
+    "wizard.watch.network": "내 인터넷 연결 (추천 · 입력할 것 없음)",
+    "wizard.hint.network": "가장 가까운 공용 서버(Cloudflare, Google, AliDNS 등)를 골라 지연을 재고, 업로드／다운로드 속도와 공유기도 함께 보여 줍니다.",
     "wizard.detail.app": "앱 이름",
     "wizard.detail.target": "주소",
     "wizard.hint.auto": "브라우저와 공식 PC 클라이언트 모두 지원하며, 방송을 바꾸면 알아서 따라갑니다.",

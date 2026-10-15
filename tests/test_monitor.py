@@ -160,21 +160,52 @@ def test_a_configured_video_is_used_when_no_room_is_set():
 
 
 # ------------------------------------------------------------- network-only
-def test_network_only_mode_without_a_target(monkeypatch):
-    monkeypatch.setattr("lagscope.monitor.tcp_rtt_ms", lambda *a, **k: 21.0)
+class FakeInternet:
+    """Stands in for the anchor probe: one fixed answer, every round."""
+
+    def __init__(self, rtt_ms):
+        from lagscope.probes.internet import Anchor
+
+        self.rtt_ms = rtt_ms
+        self.anchor = Anchor("1.1.1.1", 443, "Cloudflare")
+
+    def measure(self, timeout_s=4.0):
+        from lagscope.probes.internet import InternetResult
+
+        return InternetResult(self.rtt_ms, "tcp" if self.rtt_ms else "none", self.anchor)
+
+
+def test_network_only_mode_without_a_target():
+    """Nothing to watch in Bilibili mode: it still says how the internet is."""
     worker = _worker(_config(room_id=""))
+    worker._internet = FakeInternet(21.0)
     worker.setDisplayLatency(16.0)
 
     sample = worker._run_round()
 
-    assert sample.kind == KIND_NETWORK and sample.method == "network-only"
-    assert sample.ok and sample.total_ms == pytest.approx(37.0)
+    assert sample.kind == KIND_NETWORK and sample.method == "tcp"
+    # What ping would say: nothing estimated is added to a network number.
+    assert sample.ok and sample.total_ms == pytest.approx(21.0)
+    assert not sample.estimated
+    assert sample.host == "1.1.1.1:443" and "Cloudflare" in sample.title
+    # Not chosen on purpose here - a room is what is missing.
     assert worker._last_status == STATUS_NO_ROOM
 
 
-def test_network_only_mode_marks_an_unreachable_network(monkeypatch):
-    monkeypatch.setattr("lagscope.monitor.tcp_rtt_ms", lambda *a, **k: None)
+def test_internet_mode_chosen_on_purpose_is_not_a_missing_room():
+    worker = _worker(_config(room_id="555", manual_kind="network"))
+    worker._internet = FakeInternet(18.0)
+
+    sample = worker._run_round()
+
+    # The leftover room number does not take over a mode chosen on purpose.
+    assert sample.kind == KIND_NETWORK and sample.total_ms == pytest.approx(18.0)
+    assert worker._last_status == STATUS_OK
+
+
+def test_network_only_mode_marks_an_unreachable_network():
     worker = _worker(_config(room_id=""))
+    worker._internet = FakeInternet(None)
 
     sample = worker._run_round()
 
@@ -273,7 +304,9 @@ def test_an_app_target_is_measured_through_its_own_connections(monkeypatch):
 
     assert sample.ok and sample.kind == KIND_APP
     assert sample.network_ms == 24.0
-    assert sample.total_ms == pytest.approx(40.0)
+    # What ping would print: the display estimate stays out of a network number.
+    assert sample.total_ms == pytest.approx(24.0) and not sample.estimated
+    assert sample.display_ms == pytest.approx(16.0)   # still reported
     assert sample.host == "93.184.216.34:443" and sample.connections == 4
     assert sample.title == "game.exe"
 
@@ -311,7 +344,7 @@ def test_a_custom_target_is_pinged(monkeypatch):
 
     assert sample.ok and sample.kind == KIND_TARGET
     assert sample.host == "8.8.8.8:53" and sample.method == "tcp"
-    assert sample.total_ms == pytest.approx(28.0)
+    assert sample.total_ms == pytest.approx(12.0) and not sample.estimated
 
 
 def test_a_custom_target_falls_back_to_ping(monkeypatch):

@@ -21,15 +21,14 @@ from PySide6.QtWidgets import QApplication, QWidget
 from ..config import Config
 from ..health import HEALTH, WINDOW
 from ..i18n import tr
-from ..models import KIND_APP, KIND_LIVE, KIND_TARGET, KIND_VIDEO, LatencySample, RollingStats
-from ..probes.cdninfo import locate_line
+from .. import presentation
+from ..models import KIND_LIVE, KIND_TARGET, KIND_VIDEO, LatencySample, RollingStats
 from ..probes.display import DisplayProbe
 from .anchor import (
     WindowFinder, WindowRect, clamp_to_rect, compute_anchor_position, create_window_finder,
 )
 from .theme import (
-    Palette, color_for_level, format_mbps, format_mbps_short, format_ms, level_for,
-    palette_for,
+    Palette, color_for_level, format_mbps, format_ms, palette_for,
 )
 
 FRAME_BURST_INTERVAL_MS = 30_000
@@ -285,7 +284,8 @@ class OverlayWindow(QWidget):
 
     def _total_level(self) -> str:
         value = self._sample.total_ms if (self._sample and self._sample.ok) else None
-        return level_for(value, self._config.thresholds.good_ms, self._config.thresholds.warn_ms)
+        return presentation.level(value, self._config.thresholds,
+                                  self._sample.kind if self._sample else None)
 
     def _font(self, size: float, bold: bool = False) -> QFont:
         font = QFont(self.font())
@@ -375,34 +375,9 @@ class OverlayWindow(QWidget):
 
     def _breakdown_rows(self) -> list:
         """The detail lines, which say different things per target kind."""
-        sample = self._sample
-        kind = sample.kind if sample else KIND_LIVE
-        network = format_ms(sample.network_ms if sample else None)
-        display = format_ms(sample.display_ms if sample else None)
-        # Screen to ears. Absent for everyone on a wired output rather than
-        # shown as a permanent "--", which would be a row that never says
-        # anything to most people.
-        tail = ([(tr("label.audio"), format_ms(self._config.audio.offset_ms))]
-                if self._config.audio.measured else [])
-
-        if kind == KIND_APP:
-            peers = str(sample.connections) if (sample and sample.connections) else "--"
-            return [
-                (tr("label.latency"), network),
-                (tr("label.connections"), peers),
-                (tr("label.display"), display),
-            ] + tail
-        if kind == KIND_TARGET:
-            return [
-                (tr("label.latency"), network),
-                (tr("label.display"), display),
-            ] + tail
-        second = tr("label.startup") if kind == KIND_VIDEO else tr("label.stream")
-        return [
-            (tr("label.network"), network),
-            (second, format_ms(sample.stream_ms if sample else None)),
-            (tr("label.display"), display),
-        ] + tail
+        audio = self._config.audio
+        return presentation.breakdown_rows(
+            self._sample, self._stats, audio.offset_ms if audio.measured else 0.0)
 
     def _paint_server(self, painter: QPainter, palette: Palette, scale: float,
                       pad: float, y: float) -> float:
@@ -421,9 +396,7 @@ class OverlayWindow(QWidget):
         painter.drawText(QRectF(pad, y, self.width() - pad * 2, row_height),
                          Qt.AlignLeft | Qt.AlignVCenter, tr("label.server"))
 
-        text = ""
-        if sample is not None and sample.host:
-            text = locate_line(sample.host, sample.network_ms, sample.rtt_to_edge)
+        text = presentation.server_line(sample)
         if not text:
             text = tr("server.unknown")
         metrics = QFontMetrics(painter.font())
@@ -494,12 +467,7 @@ class OverlayWindow(QWidget):
         if sample is not None and sample.throughput_mbps:
             # For a video, download speed is what decides whether it stalls.
             parts = parts[:2] + [f"{tr('label.speed')} {format_mbps(sample.throughput_mbps)}"]
-        elif sample is not None and (sample.down_mbps is not None or sample.up_mbps is not None):
-            # Otherwise show what the whole machine is pushing through the line.
-            parts = parts[:1] + [
-                f"↓{format_mbps_short(sample.down_mbps)}",
-                f"↑{format_mbps_short(sample.up_mbps)}",
-            ]
+        # For a network target the line speeds have rows of their own above.
         text = "   ".join(parts)
         painter.setFont(self._font(7 * scale))
         painter.setPen(QPen(QColor(palette.muted)))
@@ -522,9 +490,9 @@ class OverlayWindow(QWidget):
         metrics = QFontMetrics(painter.font())
         for extra in self._extras[:4]:
             value = format_ms(extra.rtt_ms) if extra.ok else "--"
-            level = level_for(extra.rtt_ms if extra.ok else None,
-                              self._config.thresholds.good_ms,
-                              self._config.thresholds.warn_ms)
+            # A side watch is always a round trip, whatever the main one is.
+            level = presentation.level(extra.rtt_ms if extra.ok else None,
+                                       self._config.thresholds, KIND_TARGET)
             value_width = metrics.horizontalAdvance(value)
             label = metrics.elidedText(
                 extra.label, Qt.ElideRight,

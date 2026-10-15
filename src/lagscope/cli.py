@@ -239,14 +239,20 @@ def _probe_once(config) -> int:
             print(json.dumps(_with_target(sample, target), indent=2, ensure_ascii=False))
             return 0 if sample.ok else 1
 
-        rtt = tcp_rtt_ms(config.probe.rtt_host, config.probe.rtt_port, timeout_s)
         if target.kind == KIND_NETWORK:
+            from .probes.internet import InternetProbe
+
+            result = InternetProbe().measure(timeout_s)
+            anchor = result.anchor
             sample = LatencySample(
-                network_ms=rtt, total_ms=rtt, ok=rtt is not None, kind=KIND_NETWORK,
-                method="network-only", host=config.probe.rtt_host,
-                error=None if rtt is not None else "network unreachable",
+                network_ms=result.rtt_ms, total_ms=result.rtt_ms, ok=result.ok,
+                kind=KIND_NETWORK, method=result.method,
+                host=anchor.endpoint if anchor else "",
+                title=anchor.label if anchor else "",
+                error=None if result.ok else "offline-net",
             )
         else:
+            rtt = tcp_rtt_ms(config.probe.rtt_host, config.probe.rtt_port, timeout_s)
             if target.kind == KIND_VIDEO:
                 probe = VideoProbe(client, playurl_refresh_s=config.probe.playurl_refresh_s)
                 result = probe.measure(target.ident, target.page)
@@ -468,12 +474,15 @@ def _write_report(config, path: str) -> int:
     path_report = analyse(target) if target else None
     key, detail = verdict(path_report) if path_report is not None else ("", "")
 
+    from .presentation import dominant_kind, thresholds_for
+
+    guides = thresholds_for(config.thresholds, dominant_kind(history.buckets(hours)))
     document = build_html(
         buckets=history.buckets(hours), summary=summary, bucket_s=history.bucket_s,
         worst=history.worst_hour(hours), path_report=path_report,
         verdict_key=key, verdict_detail=detail,
         target_label=summary.get("label", ""),
-        good_ms=config.thresholds.good_ms, warn_ms=config.thresholds.warn_ms,
+        good_ms=guides[0], warn_ms=guides[1],
     )
     # Said before the path is printed: the two streams interleave otherwise.
     if not summary["buckets"]:

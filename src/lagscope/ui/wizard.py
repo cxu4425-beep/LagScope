@@ -23,16 +23,18 @@ from PySide6.QtWidgets import (
 
 from .. import APP_NAME, __version__
 from ..autostart import is_supported as autostart_supported
-from ..config import Config, parse_room_id
+from ..config import Config
 from ..i18n import LANGUAGE_NAMES, LANGUAGES, tr
 from .icons import app_icon
 
 # (config value, label key) for the "what should it watch" question.
+# First is the default, and the one most people want: it needs nothing typed
+# in and nothing installed. Bilibili is last because it is the specialist case.
 CHOICES = (
-    ("auto", "wizard.watch.auto"),
+    ("network", "wizard.watch.network"),
     ("app", "wizard.watch.app"),
     ("target", "wizard.watch.target"),
-    ("network", "wizard.watch.network"),
+    ("auto", "wizard.watch.auto"),
 )
 
 CORNERS = ("top-right", "top-left", "bottom-right", "bottom-left")
@@ -57,6 +59,30 @@ def _wrapped(label: QLabel, min_lines: int = 1) -> QLabel:
         # a radio button swaps the text underneath it.
         label.setMinimumHeight(label.fontMetrics().lineSpacing() * min_lines)
     return label
+
+
+def add_router(config: Config, gateway_lookup=None) -> bool:
+    """Add the home router as a side watch, unless it is already there.
+
+    Quietly does nothing when the gateway cannot be found - a VPN that owns the
+    default route, say - because the wizard is no place for an error about a
+    feature nobody asked for by name.
+    """
+    if gateway_lookup is None:
+        from ..probes.path import default_gateway as gateway_lookup
+    try:
+        gateway = gateway_lookup()
+    except Exception:
+        gateway = ""
+    if not gateway:
+        return False
+    extras = list(config.watch_extras or [])
+    if any(str(entry.get("ident", "")).lower() == gateway.lower() for entry in extras):
+        return False
+    extras.insert(0, {"kind": "target", "ident": gateway, "port": 80,
+                      "label": tr("extras.router")})
+    config.watch_extras = extras
+    return True
 
 
 class SetupWizard(QDialog):
@@ -100,7 +126,7 @@ class SetupWizard(QDialog):
             self._watch_group.addButton(button)
             self._watch_buttons[value] = button
             watch_layout.addWidget(button)
-        self._watch_buttons["auto"].setChecked(True)
+        self._watch_buttons["network"].setChecked(True)
         self._watch_group.buttonToggled.connect(lambda *_: self._sync())
 
         self.detail_edit = QLineEdit(watch_box)
@@ -158,7 +184,7 @@ class SetupWizard(QDialog):
         for value, button in self._watch_buttons.items():
             if button.isChecked():
                 return value
-        return "auto"
+        return "network"
 
     def _sync(self) -> None:
         """Only one of the four choices needs anything typed in."""
@@ -166,7 +192,6 @@ class SetupWizard(QDialog):
         needs_detail = choice in ("app", "target")
         self.detail_edit.setVisible(needs_detail)
         self.detail_label.setVisible(needs_detail)
-        self.detail_hint.setVisible(choice != "network")
 
         if choice == "app":
             self.detail_label.setText(tr("wizard.detail.app"))
@@ -179,7 +204,7 @@ class SetupWizard(QDialog):
         elif choice == "auto":
             self.detail_hint.setText(tr("wizard.hint.auto"))
         else:
-            self.detail_hint.setText("")
+            self.detail_hint.setText(tr("wizard.hint.network"))
 
     # ------------------------------------------------------------------- data
     def apply_to(self, config: Config) -> Config:
@@ -188,7 +213,14 @@ class SetupWizard(QDialog):
         choice = self._selected()
         detail = self.detail_edit.text().strip()
 
-        if choice == "auto":
+        if choice == "network":
+            config.detect.enabled = False
+            config.manual_kind = "network"
+            # "Is it my home network or the internet?" is the first question
+            # anyone asks when the number goes red, and the router answers it.
+            # Added once, here, where the user is choosing the general view.
+            add_router(config)
+        elif choice == "auto":
             config.detect.enabled = True
         elif choice == "app":
             config.detect.enabled = False
@@ -199,10 +231,6 @@ class SetupWizard(QDialog):
             config.detect.enabled = False
             config.manual_kind = "target"
             config.target_host = detail
-        else:
-            config.detect.enabled = False
-            config.manual_kind = "live"
-            config.room_id = parse_room_id(config.room_id)
 
         corner = self.corner_combo.currentData()
         if corner == "free":

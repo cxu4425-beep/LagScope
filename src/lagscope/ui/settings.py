@@ -569,6 +569,22 @@ class SettingsDialog(QDialog):
         self.include_audio_check = QCheckBox(tr("advanced.include_audio"), page)
         form.addRow("", self.include_audio_check)
 
+        # Network first: it is what most people watch. The stream pair is on a
+        # scale a thousand times larger and would make every ping green.
+        self.net_good_spin = QDoubleSpinBox(page)
+        self.net_good_spin.setRange(1.0, 10_000.0)
+        self.net_good_spin.setSingleStep(10.0)
+        self.net_good_spin.setDecimals(0)
+        self.net_good_spin.setSuffix(" ms")
+        form.addRow(tr("advanced.net_good"), self.net_good_spin)
+
+        self.net_warn_spin = QDoubleSpinBox(page)
+        self.net_warn_spin.setRange(1.0, 10_000.0)
+        self.net_warn_spin.setSingleStep(10.0)
+        self.net_warn_spin.setDecimals(0)
+        self.net_warn_spin.setSuffix(" ms")
+        form.addRow(tr("advanced.net_warn"), self.net_warn_spin)
+
         self.good_spin = QDoubleSpinBox(page)
         self.good_spin.setRange(10.0, 600_000.0)
         self.good_spin.setSingleStep(100.0)
@@ -726,6 +742,8 @@ class SettingsDialog(QDialog):
         self.audio_offset_spin.setValue(self._config.audio.offset_ms)
         self.include_audio_check.setChecked(self._config.audio.include_in_total)
         self._refresh_audio_note()
+        self.net_good_spin.setValue(self._config.thresholds.net_good_ms)
+        self.net_warn_spin.setValue(self._config.thresholds.net_warn_ms)
         self.good_spin.setValue(self._config.thresholds.good_ms)
         self.warn_spin.setValue(self._config.thresholds.warn_ms)
         self.csv_check.setChecked(self._config.recording.csv_enabled)
@@ -912,6 +930,9 @@ class SettingsDialog(QDialog):
         config.audio.include_in_total = self.include_audio_check.isChecked()
         config.audio.device_note = self._config.audio.device_note
         config.audio.measured_at = self._config.audio.measured_at
+        config.thresholds.net_good_ms = self.net_good_spin.value()
+        config.thresholds.net_warn_ms = max(self.net_warn_spin.value(),
+                                            self.net_good_spin.value())
         config.thresholds.good_ms = self.good_spin.value()
         config.thresholds.warn_ms = max(self.warn_spin.value(), self.good_spin.value())
         config.recording.csv_enabled = self.csv_check.isChecked()

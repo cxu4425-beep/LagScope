@@ -333,6 +333,9 @@ class FakeBridge:
 
 
 def _detector(monkeypatch, entries=(), titles=(), client_entries=(), **config_kwargs):
+    # Detection is opt-in for a fresh install; these tests are about what it
+    # does once someone has turned it on.
+    config_kwargs.setdefault("enabled", True)
     config = DetectConfig(**config_kwargs)
     monkeypatch.setattr(history_source, "scan", lambda **kwargs: list(entries))
     monkeypatch.setattr(title_source, "window_titles", lambda: list(titles))
@@ -476,7 +479,7 @@ def test_the_client_teaches_its_window_title(monkeypatch, tmp_path):
         lambda self, **kwargs: [_entry("https://live.bilibili.com/31415926", "", ago_s=5)],
     )
     monkeypatch.setattr(client_source.ClientScanner, "discover", lambda self, force=False: [])
-    detector = AutoDetector(DetectConfig(), memory_path=tmp_path / "titles.json")
+    detector = AutoDetector(DetectConfig(enabled=True), memory_path=tmp_path / "titles.json")
 
     detector.poll(force=True)
 
@@ -562,7 +565,7 @@ def test_a_short_link_without_a_resolver_is_ignored(monkeypatch):
 
 
 def test_copying_a_link_teaches_the_client_window_title(monkeypatch, tmp_path):
-    config = DetectConfig()
+    config = DetectConfig(enabled=True)
     monkeypatch.setattr(history_source, "scan", lambda **kwargs: [])
     monkeypatch.setattr(title_source, "window_titles", lambda: ["某某的直播间 - 哔哩哔哩"])
     monkeypatch.setattr(title_source, "foreground_title", lambda: "某某的直播间 - 哔哩哔哩")
@@ -578,7 +581,7 @@ def test_copying_a_link_teaches_the_client_window_title(monkeypatch, tmp_path):
 
 
 def test_a_generic_client_title_teaches_nothing(monkeypatch, tmp_path):
-    config = DetectConfig()
+    config = DetectConfig(enabled=True)
     monkeypatch.setattr(history_source, "scan", lambda **kwargs: [])
     monkeypatch.setattr(title_source, "window_titles", lambda: ["哔哩哔哩"])
     monkeypatch.setattr(title_source, "foreground_title", lambda: "哔哩哔哩")

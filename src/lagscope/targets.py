@@ -23,6 +23,11 @@ def manual_target(config, foreground_app: Optional[Callable[[], str]] = None) ->
     """
     kind = config.manual_kind
 
+    # Chosen on purpose, so leftovers from another mode - a room number typed
+    # once, an app picked last week - must not quietly take over.
+    if kind == KIND_NETWORK:
+        return WatchTarget(kind=KIND_NETWORK, source="manual")
+
     if kind == KIND_APP:
         name = config.app_name
         if config.app_follow_foreground and foreground_app is not None:

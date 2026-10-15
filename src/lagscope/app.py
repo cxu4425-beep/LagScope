@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 from . import APP_NAME, REPO_URL, __version__
 from .autostart import get_autostart, is_supported as autostart_supported, set_autostart
 from .config import Config, parse_room_id, app_config_dir
+from . import presentation
 from .health import HEALTH
 from .i18n import set_language, tr
 from .events import STALL, EventLog, Notifier
@@ -41,7 +42,7 @@ from .update import RELEASES_PAGE, UpdateInfo, check as check_for_update
 from .web import DashboardServer
 from .ui.icons import app_icon
 from .probes.speed import tier_key
-from .ui.theme import format_mbps, format_ms, level_for
+from .ui.theme import format_mbps, format_ms
 from .ui.overlay import OverlayWindow
 from .ui.history_window import HistoryWindow
 from .ui.settings import SettingsDialog
@@ -63,6 +64,7 @@ ERROR_MESSAGES = {
     "no-app": "status.no_app",
     "no-video": "status.no_video",
     "no-room": "status.no_room",
+    "offline-net": "status.offline_net",
 }
 MAX_CLIPBOARD_CHARS = 4096
 
@@ -586,8 +588,11 @@ class MonitorApplication(QObject):
             hours = self._history_window.hours()
         path_report, verdict_key, verdict_detail = (self._last_diagnosis
                                                     or (None, "", ""))
+        buckets = self._history.buckets(hours)
+        thresholds = presentation.thresholds_for(
+            self._config.thresholds, presentation.dominant_kind(buckets))
         return {
-            "buckets": self._history.buckets(hours),
+            "buckets": buckets,
             "summary": self._history.summary(hours),
             "bucket_s": self._history.bucket_s,
             "worst": self._history.worst_hour(hours),
@@ -601,8 +606,9 @@ class MonitorApplication(QObject):
             "speed": self._last_speed,
             **self._pattern_context(hours, verdict_key),
             "target_label": self._room_title or self._watch_label(),
-            "good_ms": self._config.thresholds.good_ms,
-            "warn_ms": self._config.thresholds.warn_ms,
+            # The chart's guide lines, on the scale of what it mostly shows.
+            "good_ms": thresholds[0],
+            "warn_ms": thresholds[1],
         }
 
     def _watch_label(self) -> str:
@@ -1131,37 +1137,14 @@ class MonitorApplication(QObject):
         if self._dashboard is None:
             return
         sample = self._stats.last()
-        kind = sample.kind if sample else KIND_LIVE
+        kind = sample.kind if sample else None
         value = sample.total_ms if (sample and sample.ok) else None
-        level = level_for(value, self._config.thresholds.good_ms,
-                          self._config.thresholds.warn_ms)
-
-        if kind == KIND_APP:
-            rows = [
-                (tr("label.latency"), format_ms(sample.network_ms if sample else None)),
-                (tr("label.connections"), str(sample.connections) if sample and sample.connections else "--"),
-                (tr("label.display"), format_ms(sample.display_ms if sample else None)),
-            ]
-        elif kind == KIND_TARGET:
-            rows = [
-                (tr("label.latency"), format_ms(sample.network_ms if sample else None)),
-                (tr("label.display"), format_ms(sample.display_ms if sample else None)),
-            ]
-        else:
-            second = tr("label.startup") if kind == KIND_VIDEO else tr("label.stream")
-            rows = [
-                (tr("label.network"), format_ms(sample.network_ms if sample else None)),
-                (second, format_ms(sample.stream_ms if sample else None)),
-                (tr("label.display"), format_ms(sample.display_ms if sample else None)),
-            ]
-
-        if self._config.audio.measured:
-            rows.append((tr("label.audio"), format_ms(self._config.audio.offset_ms)))
+        level = presentation.level(value, self._config.thresholds, kind)
+        audio = self._config.audio
+        rows = presentation.breakdown_rows(
+            sample, self._stats, audio.offset_ms if audio.measured else 0.0)
         if sample is not None and sample.host:
-            from .probes.cdninfo import locate_line
-
-            rows.append((tr("label.server"),
-                         locate_line(sample.host, sample.network_ms, sample.rtt_to_edge)))
+            rows.append((tr("label.server"), presentation.server_line(sample)))
 
         events = self._events.summary()
         stats = [
@@ -1185,9 +1168,8 @@ class MonitorApplication(QObject):
                 {
                     "label": extra.label,
                     "value": format_ms(extra.rtt_ms) if extra.ok else "--",
-                    "level": level_for(extra.rtt_ms if extra.ok else None,
-                                       self._config.thresholds.good_ms,
-                                       self._config.thresholds.warn_ms),
+                    "level": presentation.level(extra.rtt_ms if extra.ok else None,
+                                                self._config.thresholds, KIND_TARGET),
                 }
                 for extra in self._ordered_extras()
             ],
@@ -1281,7 +1263,7 @@ class MonitorApplication(QObject):
                 self._history_window.refresh()
         self._overlay.update_sample(sample, self._stats)
         if self._tray is not None:
-            self._tray.update_sample(sample, self._status_line())
+            self._tray.update_sample(sample, self._status_line(), self._stats)
         if self._recorder is not None:
             self._recorder.write(sample)
         self._publish_dashboard()
@@ -1318,8 +1300,10 @@ class MonitorApplication(QObject):
     @Slot(object)
     def _on_target(self, target) -> None:
         self._target = target
-        if target is None or target.kind == KIND_NETWORK:
+        if target is None:
             self._room_title = ""
+        elif target.kind == KIND_NETWORK:
+            self._room_title = tr("label.internet")
         elif target.kind == KIND_VIDEO:
             self._room_title = f"{tr('label.video')} {target.title or target.ident}"
         elif target.kind == KIND_APP:
@@ -1359,7 +1343,7 @@ class MonitorApplication(QObject):
     def _update_status_text(self) -> None:
         self._overlay.set_status(self._status_line())
         if self._tray is not None:
-            self._tray.update_sample(self._stats.last(), self._status_line())
+            self._tray.update_sample(self._stats.last(), self._status_line(), self._stats)
 
     def _poll_clipboard(self, force: bool = False) -> None:
         """Hand a freshly copied Bilibili link to the worker.
