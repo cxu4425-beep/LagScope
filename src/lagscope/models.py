@@ -134,6 +134,9 @@ class LatencySample:
     # Whole-machine throughput, attached to every sample whatever is watched.
     up_mbps: Optional[float] = None
     down_mbps: Optional[float] = None
+    # Bytes moved since the previous sample, for the daily data-usage totals.
+    up_bytes: int = 0
+    down_bytes: int = 0
     connections: int = 0          # how many sockets the watched app holds open
     # Which wireless link carried this sample, e.g. "Home (2.4 GHz)". Empty on
     # a wired machine, which is a fact about the machine rather than a gap.

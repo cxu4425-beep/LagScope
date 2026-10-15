@@ -25,7 +25,9 @@ from PySide6.QtWidgets import (
 from ..config import Config
 from ..history import Bucket, History
 from ..i18n import tr
-from ..report import grid_values, health_rows, nice_ceiling, worst_hour_line
+from ..report import (
+    grid_values, health_rows, nice_ceiling, usage_rows, worst_hour_line,
+)
 from .icons import app_icon
 from .theme import Palette, format_ms, palette_for
 
@@ -350,6 +352,19 @@ def analysis_html(context: dict) -> str:
         parts.append(
             f"<b>{escape(tr('health.title'))}</b>"
             f"<table width='100%' cellspacing='0' cellpadding='3'>{rows}</table>"
+        )
+
+    usage = usage_rows(context.get("usage"))
+    if usage:
+        rows = "".join(
+            f"<tr><td>{escape(period)}</td><td align='right'>↓ {escape(down)}</td>"
+            f"<td align='right'>↑ {escape(up)}</td><td align='right'>{escape(total)}</td></tr>"
+            for period, down, up, total in usage[:2]
+        )
+        parts.append(
+            f"<b>{escape(tr('usage.title'))}</b>"
+            f"<table width='100%' cellspacing='0' cellpadding='3'>{rows}</table>"
+            f"<p><small>{escape(tr('usage.note'))}</small></p>"
         )
 
     edges = context.get("edges") or ()

@@ -500,7 +500,8 @@ class MonitorWorker(QObject):
         speed = self._netspeed.sample()
         if not speed.ok:
             return sample
-        return replace(sample, up_mbps=speed.up_mbps, down_mbps=speed.down_mbps)
+        return replace(sample, up_mbps=speed.up_mbps, down_mbps=speed.down_mbps,
+                       up_bytes=speed.up_bytes, down_bytes=speed.down_bytes)
 
     def _current_wifi(self) -> Optional[WifiInfo]:
         """The wireless link, re-read every WIFI_REFRESH_S at most."""

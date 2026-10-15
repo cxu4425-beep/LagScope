@@ -126,8 +126,14 @@ def breakdown_rows(sample, stats=None, audio_offset_ms: float = 0.0) -> List[tup
     return rows
 
 
-def tooltip(sample, status_text: str, stats=None, app_name: str = "") -> str:
-    """The tray icon's hover text."""
+def tooltip(sample, status_text: str, stats=None, app_name: str = "",
+            usage_line: str = "") -> str:
+    """The tray icon's hover text, with today's data usage under it."""
+    text = _tooltip(sample, status_text, stats, app_name)
+    return f"{text}\n{usage_line}" if usage_line else text
+
+
+def _tooltip(sample, status_text: str, stats=None, app_name: str = "") -> str:
     value = sample.total_ms if (sample and sample.ok) else None
     title = sample.title if (sample and sample.title) else app_name
     kind = sample.kind if sample else KIND_NETWORK

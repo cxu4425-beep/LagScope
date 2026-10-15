@@ -622,6 +622,26 @@ STRINGS: dict[str, tuple[str, str, str]] = {
 
     # --------------------------------------------------------- history window
     "menu.history": ("延迟历史…", "延遲歷史…", "Latency history…"),
+    "menu.overlay_options": ("悬浮窗选项", "懸浮視窗選項", "Overlay options"),
+    "menu.bilibili": ("B 站", "B 站", "Bilibili"),
+    "menu.more": ("更多工具", "更多工具", "More tools"),
+    "usage.line": (
+        "今天 ↓{today_down} ↑{today_up} · 本月 ↓{month_down} ↑{month_up}",
+        "今天 ↓{today_down} ↑{today_up} · 本月 ↓{month_down} ↑{month_up}",
+        "Today ↓{today_down} ↑{today_up} · Month ↓{month_down} ↑{month_up}",
+    ),
+    "usage.title": ("流量用量", "流量用量", "Data usage"),
+    "usage.today": ("今天", "今天", "Today"),
+    "usage.month": ("本月", "本月", "This month"),
+    "usage.down": ("下载", "下載", "Down"),
+    "usage.up": ("上传", "上傳", "Up"),
+    "usage.total": ("合计", "合計", "Total"),
+    "usage.note": (
+        "整台电脑所有网卡的流量，只在本程序运行时计算；关着的时候用掉的不会算进来，也不会估算。",
+        "整台電腦所有網卡的流量，只在本程式執行時計算；關著的時候用掉的不會算進來，也不會估算。",
+        "Everything this machine sent and received, counted while this program runs; "
+        "traffic while it was closed is not included or estimated.",
+    ),
     "menu.report": ("导出体检报告…", "匯出體檢報告…", "Export a health report…"),
     "history.title": ("延迟历史", "延遲歷史", "Latency history"),
     "history.range.1h": ("1 小时", "1 小時", "1 hour"),
@@ -1137,6 +1157,7 @@ STRINGS: dict[str, tuple[str, str, str]] = {
     "speed.running": ("正在测速，先别管延迟数字…", "正在測速，先別管延遲數字…",
                       "Testing - ignore the latency figure for a moment…"),
     "speed.result": ("下载速度：{value}", "下載速度：{value}", "Download: {value}"),
+    "speed.loaded_short": ("闲置 → 满载延迟", "閒置 → 滿載延遲", "Latency idle → loaded"),
     "speed.result_up": ("上传速度：{value}", "上傳速度：{value}", "Upload: {value}"),
     "speed.up_failed": ("上传测试没有完成", "上傳測試沒有完成", "Upload: the test did not finish"),
     "speed.idle": ("空闲延迟：{value}", "閒置延遲：{value}", "Idle latency: {value}"),

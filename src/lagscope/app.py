@@ -38,6 +38,7 @@ from .report import (
 )
 from .selftest import redact_home
 from .single_instance import SingleInstance
+from .usage import FILE_NAME as USAGE_FILE, UsageLedger, format_bytes
 from .update import RELEASES_PAGE, UpdateInfo, check as check_for_update
 from .web import DashboardServer
 from .ui.icons import app_icon
@@ -136,6 +137,9 @@ class MonitorApplication(QObject):
         self._history = History(bucket_s=self._config.history.bucket_s,
                                 keep_hours=self._config.history.keep_hours)
         self._history_window: Optional[HistoryWindow] = None
+        # Data moved per day, for "how much did I use". Its own small file:
+        # the minute history keeps a week, and a month's total needs a month.
+        self._usage = UsageLedger(app_config_dir() / USAGE_FILE)
         # Kept so an exported report carries the last check, not a blank section.
         self._last_diagnosis: Optional[tuple] = None
         self._last_auto_check = 0.0
@@ -153,6 +157,8 @@ class MonitorApplication(QObject):
 
         self._tray: Optional[TrayIcon] = None
         self._menu = QMenu()
+        # Once, here: the menu is rebuilt on every language change.
+        self._menu.aboutToShow.connect(self._refresh_usage_action)
         self._build_menu()
         self._setup_tray()
 
@@ -238,29 +244,25 @@ class MonitorApplication(QObject):
 
     # ------------------------------------------------------------------- menu
     def _build_menu(self) -> None:
+        """The tray / overlay menu, most-used first.
+
+        It had grown to two dozen flat entries with the Bilibili-only ones near
+        the top. The everyday things - how much data, how fast, is it broken,
+        what happened earlier - come first; overlay options and Bilibili have
+        submenus; the tools used once a month sit under "More".
+        """
         self._menu.clear()
 
-        self._action_overlay = QAction(tr("menu.show_overlay"), self._menu, checkable=True)
-        self._action_overlay.setChecked(self._config.overlay.enabled)
-        self._action_overlay.toggled.connect(self._set_overlay_visible)
-        self._menu.addAction(self._action_overlay)
-
-        self._action_lock = QAction(tr("menu.lock"), self._menu, checkable=True)
-        self._action_lock.setChecked(self._config.overlay.locked)
-        self._action_lock.toggled.connect(self._set_locked)
-        self._menu.addAction(self._action_lock)
-
-        self._action_click_through = QAction(tr("menu.click_through"), self._menu, checkable=True)
-        self._action_click_through.setChecked(self._config.overlay.click_through)
-        self._action_click_through.toggled.connect(self._set_click_through)
-        self._menu.addAction(self._action_click_through)
-
+        # Not clickable: a line of information, refreshed each time it opens.
+        self._action_usage = QAction("", self._menu)
+        self._action_usage.setEnabled(False)
+        self._menu.addAction(self._action_usage)
+        self._refresh_usage_action()
         self._menu.addSeparator()
 
-        self._action_detect = QAction(tr("menu.auto_detect"), self._menu, checkable=True)
-        self._action_detect.setChecked(self._config.detect.enabled)
-        self._action_detect.toggled.connect(self._set_auto_detect)
-        self._menu.addAction(self._action_detect)
+        speed_action = QAction(tr("menu.speedtest"), self._menu)
+        speed_action.triggered.connect(self.run_speed_test)
+        self._menu.addAction(speed_action)
 
         diagnose_action = QAction(tr("menu.diagnose"), self._menu)
         diagnose_action.triggered.connect(self._run_diagnosis)
@@ -270,27 +272,26 @@ class MonitorApplication(QObject):
         history_action.triggered.connect(self.open_history)
         self._menu.addAction(history_action)
 
-        report_action = QAction(tr("menu.report"), self._menu)
-        report_action.triggered.connect(self.export_report)
-        self._menu.addAction(report_action)
+        self._menu.addSeparator()
 
-        speed_action = QAction(tr("menu.speedtest"), self._menu)
-        speed_action.triggered.connect(self.run_speed_test)
-        self._menu.addAction(speed_action)
+        self._action_overlay = QAction(tr("menu.show_overlay"), self._menu, checkable=True)
+        self._action_overlay.setChecked(self._config.overlay.enabled)
+        self._action_overlay.toggled.connect(self._set_overlay_visible)
+        self._menu.addAction(self._action_overlay)
 
-        mark_action = QAction(tr("menu.mark"), self._menu)
-        mark_action.triggered.connect(self.mark_moment)
-        self._menu.addAction(mark_action)
+        overlay_menu = self._menu.addMenu(tr("menu.overlay_options"))
+        self._action_lock = QAction(tr("menu.lock"), overlay_menu, checkable=True)
+        self._action_lock.setChecked(self._config.overlay.locked)
+        self._action_lock.toggled.connect(self._set_locked)
+        overlay_menu.addAction(self._action_lock)
 
-        phone_action = QAction(tr("menu.phone"), self._menu)
-        phone_action.triggered.connect(self._show_phone_url)
-        self._menu.addAction(phone_action)
+        self._action_click_through = QAction(tr("menu.click_through"), overlay_menu,
+                                             checkable=True)
+        self._action_click_through.setChecked(self._config.overlay.click_through)
+        self._action_click_through.toggled.connect(self._set_click_through)
+        overlay_menu.addAction(self._action_click_through)
 
-        clipboard_action = QAction(tr("menu.read_clipboard"), self._menu)
-        clipboard_action.triggered.connect(self._read_clipboard_now)
-        self._menu.addAction(clipboard_action)
-
-        theme_menu = self._menu.addMenu(tr("overlay.theme"))
+        theme_menu = overlay_menu.addMenu(tr("overlay.theme"))
         theme_group = QActionGroup(theme_menu)
         theme_group.setExclusive(True)
         for theme in ("dark", "light", "pink"):
@@ -299,6 +300,10 @@ class MonitorApplication(QObject):
             action.triggered.connect(lambda _checked, name=theme: self._set_theme(name))
             theme_group.addAction(action)
             theme_menu.addAction(action)
+
+        reset_action = QAction(tr("menu.reset_position"), overlay_menu)
+        reset_action.triggered.connect(self._reset_position)
+        overlay_menu.addAction(reset_action)
 
         self._action_pause = QAction(
             tr("menu.resume") if self._paused else tr("menu.pause"), self._menu, checkable=True
@@ -310,27 +315,36 @@ class MonitorApplication(QObject):
         self._action_pause.toggled.connect(self._set_paused)
         self._menu.addAction(self._action_pause)
 
-        reset_action = QAction(tr("menu.reset_position"), self._menu)
-        reset_action.triggered.connect(self._reset_position)
-        self._menu.addAction(reset_action)
+        self._menu.addSeparator()
+
+        bilibili_menu = self._menu.addMenu(tr("menu.bilibili"))
+        self._action_detect = QAction(tr("menu.auto_detect"), bilibili_menu, checkable=True)
+        self._action_detect.setChecked(self._config.detect.enabled)
+        self._action_detect.toggled.connect(self._set_auto_detect)
+        bilibili_menu.addAction(self._action_detect)
+
+        clipboard_action = QAction(tr("menu.read_clipboard"), bilibili_menu)
+        clipboard_action.triggered.connect(self._read_clipboard_now)
+        bilibili_menu.addAction(clipboard_action)
+
+        more_menu = self._menu.addMenu(tr("menu.more"))
+        for key, slot in (
+            ("menu.report", self.export_report),
+            ("menu.mark", self.mark_moment),
+            ("menu.phone", self._show_phone_url),
+            ("menu.copy_diag", self._copy_diagnostics),
+            ("menu.selftest", self._run_selftest),
+            ("menu.open_config", self._open_config_folder),
+        ):
+            action = QAction(tr(key), more_menu)
+            action.triggered.connect(slot)
+            more_menu.addAction(action)
 
         self._menu.addSeparator()
 
         settings_action = QAction(tr("menu.settings"), self._menu)
         settings_action.triggered.connect(self.open_settings)
         self._menu.addAction(settings_action)
-
-        diag_action = QAction(tr("menu.copy_diag"), self._menu)
-        diag_action.triggered.connect(self._copy_diagnostics)
-        self._menu.addAction(diag_action)
-
-        selftest_action = QAction(tr("menu.selftest"), self._menu)
-        selftest_action.triggered.connect(self._run_selftest)
-        self._menu.addAction(selftest_action)
-
-        folder_action = QAction(tr("menu.open_config"), self._menu)
-        folder_action.triggered.connect(self._open_config_folder)
-        self._menu.addAction(folder_action)
 
         if self._update_available is not None:
             label = tr("update.available", version=self._update_available.version,
@@ -349,6 +363,22 @@ class MonitorApplication(QObject):
         quit_action = QAction(tr("menu.quit"), self._menu)
         quit_action.triggered.connect(self._app.quit)
         self._menu.addAction(quit_action)
+
+    def _usage_line(self) -> str:
+        today_down, today_up = self._usage.today()
+        month_down, month_up = self._usage.month()
+        return tr("usage.line",
+                  today_down=format_bytes(today_down), today_up=format_bytes(today_up),
+                  month_down=format_bytes(month_down), month_up=format_bytes(month_up))
+
+    def _usage_context(self) -> dict:
+        return {"today": self._usage.today(), "month": self._usage.month(),
+                "recent": self._usage.recent(7)}
+
+    def _refresh_usage_action(self) -> None:
+        action = getattr(self, "_action_usage", None)
+        if action is not None:
+            action.setText(self._usage_line())
 
     def _setup_tray(self) -> None:
         if not self._config.tray.enabled:
@@ -629,6 +659,7 @@ class MonitorApplication(QObject):
             verdict_detail=context["verdict_detail"], target_label=context["target_label"],
             auto_findings=context["auto_findings"], switches=context["switches"],
             comparisons=context["comparisons"], speed=context["speed"],
+            usage=context["usage"],
             edges=context["edges"], edge_note=context["edge_note"],
             edges_comparable=context["edges_comparable"],
             links=context["links"], link_note=context["link_note"],
@@ -642,6 +673,7 @@ class MonitorApplication(QObject):
     def _flush_history(self) -> None:
         if self._config.history.enabled:
             self._history.flush()
+        self._usage.flush()
 
     # ------------------------------------------------------------- updates
     def _start_update_check(self, manual: bool = False) -> None:
@@ -934,6 +966,8 @@ class MonitorApplication(QObject):
             # What cannot be measured right now. First in the report,
             # because it changes how the numbers below should be read.
             "health": [item.as_dict() for item in HEALTH.current()],
+            # Data moved today and this month - not tied to the hours shown.
+            "usage": self._usage_context(),
             "links": links,
             "link_note": link_note,
             "signals": signals,
@@ -1242,6 +1276,7 @@ class MonitorApplication(QObject):
         if event is not None:
             self._announce(event)
         self._stats.append(sample)
+        self._usage.add(sample.down_bytes, sample.up_bytes, sample.ts or None)
         if self._config.history.enabled:
             self._history.add(sample)
             if event is not None:
@@ -1250,7 +1285,8 @@ class MonitorApplication(QObject):
                 self._history_window.refresh()
         self._overlay.update_sample(sample, self._stats)
         if self._tray is not None:
-            self._tray.update_sample(sample, self._status_line(), self._stats)
+            self._tray.update_sample(sample, self._status_line(), self._stats,
+                                     self._usage_line())
         if self._recorder is not None:
             self._recorder.write(sample)
         self._publish_dashboard()
@@ -1330,7 +1366,8 @@ class MonitorApplication(QObject):
     def _update_status_text(self) -> None:
         self._overlay.set_status(self._status_line())
         if self._tray is not None:
-            self._tray.update_sample(self._stats.last(), self._status_line(), self._stats)
+            self._tray.update_sample(self._stats.last(), self._status_line(),
+                                     self._stats, self._usage_line())
 
     def _poll_clipboard(self, force: bool = False) -> None:
         """Hand a freshly copied Bilibili link to the worker.
@@ -1442,6 +1479,7 @@ class MonitorApplication(QObject):
         self._clipboard_timer.stop()
         self._history_timer.stop()
         self._history.close()
+        self._usage.flush()
         if self._save_timer.isActive():
             self._save_timer.stop()
         self._save_config_now()

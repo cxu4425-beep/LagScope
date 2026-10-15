@@ -33,6 +33,7 @@ from .probes.cdninfo import detail as cdn_summary
 from .probes.speed import tier_key
 from .textfmt import pad as text_pad, width as text_width
 from .ui.theme import format_mbps, format_ms
+from .usage import format_bytes
 
 CHART_WIDTH = 960
 CHART_HEIGHT = 260
@@ -283,6 +284,44 @@ def _fmt_time(ts: Optional[float]) -> str:
     return time.strftime("%Y-%m-%d %H:%M", time.localtime(ts))
 
 
+def usage_rows(usage) -> List[tuple]:
+    """``(period, down, up, total)`` for today, this month and recent days.
+
+    Shared by the report and the history window. Nothing at all when nothing
+    has been counted, rather than a table of zeros.
+    """
+    if not usage:
+        return []
+    today = tuple(usage.get("today") or (0, 0))
+    month = tuple(usage.get("month") or (0, 0))
+    recent = [entry for entry in usage.get("recent") or () if entry[1] or entry[2]]
+    if not any(today) and not any(month) and not recent:
+        return []
+    rows = [
+        (tr("usage.today"), format_bytes(today[0]), format_bytes(today[1]),
+         format_bytes(today[0] + today[1])),
+        (tr("usage.month"), format_bytes(month[0]), format_bytes(month[1]),
+         format_bytes(month[0] + month[1])),
+    ]
+    for day, down, up in recent:
+        rows.append((day[5:], format_bytes(down), format_bytes(up), format_bytes(down + up)))
+    return rows
+
+
+def speed_cells(speed) -> List[tuple]:
+    """``(label, value)`` for a speed test result, whichever kind it is."""
+    cells = [(tr("label.down"), format_mbps(speed.mbps))]
+    up = getattr(speed, "up_mbps", None)
+    if up is not None:
+        cells.append((tr("label.up"), format_mbps(up)))
+    grade = getattr(speed, "grade", "")
+    if grade:
+        loaded = speed.idle_ms + speed.bloat_ms
+        cells.append((tr("speed.loaded_short"),
+                      f"{format_ms(speed.idle_ms)} → {format_ms(loaded)} ({grade})"))
+    return cells
+
+
 def health_rows(health: Sequence) -> List[tuple]:
     """``(what, why it matters, since)`` for each thing that is not working.
 
@@ -421,7 +460,7 @@ def build_html(*, buckets: Sequence[Bucket], summary: dict, bucket_s: float = 60
                worst: Optional[dict] = None, path_report=None, verdict_key: str = "",
                verdict_detail: str = "", extras: Sequence = (), target_label: str = "",
                auto_findings: Sequence = (), switches: Sequence = (),
-               comparisons: Sequence = (), speed=None,
+               comparisons: Sequence = (), speed=None, usage=None,
                edges: Sequence = (), edge_note: str = "", pattern_note: str = "",
                edges_comparable: bool = True,
                links: Sequence = (), link_note: str = "",
@@ -548,16 +587,36 @@ def build_html(*, buckets: Sequence[Bucket], summary: dict, bucket_s: float = 60
 
     if speed is not None and getattr(speed, "ok", False):
         body.append(f"<h2>{esc(tr('speed.title'))}</h2>")
+        cells = "".join(
+            f'<div class="cell"><div class="k">{esc(label)}</div>'
+            f'<div class="v">{esc(value)}</div></div>'
+            for label, value in speed_cells(speed)
+        )
+        grade = getattr(speed, "grade", "")
+        verdict = (f'<p class="sub" style="margin:6px 0 0">'
+                   f'{esc(tr("speed.grade." + grade.replace("+", "plus")))}</p>'
+                   if grade else "")
         body.append(
-            f'<div class="card"><div class="grid">'
-            f'<div class="cell"><div class="k">{esc(tr("label.down"))}</div>'
-            f'<div class="v">{esc(format_mbps(speed.mbps))}</div></div>'
+            f'<div class="card"><div class="grid">{cells}'
             f'<div class="cell"><div class="k">{esc(tr("speed.host"))}</div>'
             f'<div class="v" style="font-size:14px">{esc(speed.host)}</div>'
             f'{_where_html(speed.host)}</div>'
             f'</div><p class="sub" style="margin:10px 0 0">{esc(tr(tier_key(speed.mbps)))}</p>'
-            "</div>"
+            f"{verdict}</div>"
         )
+
+    usage_table = usage_rows(usage)
+    if usage_table:
+        body.append(f"<h2>{esc(tr('usage.title'))}</h2>")
+        head = (f"<tr><th></th><th>{esc(tr('usage.down'))}</th><th>{esc(tr('usage.up'))}</th>"
+                f"<th>{esc(tr('usage.total'))}</th></tr>")
+        rows = "".join(
+            f"<tr><td>{esc(period)}</td><td>{esc(down)}</td><td>{esc(up)}</td>"
+            f"<td>{esc(total)}</td></tr>"
+            for period, down, up, total in usage_table
+        )
+        body.append(f'<table><thead>{head}</thead><tbody>{rows}</tbody></table>')
+        body.append(f'<p class="sub">{esc(tr("usage.note"))}</p>')
 
     if edges:
         body.append("<h2>"
@@ -685,6 +744,7 @@ def build_text(*, summary: dict, worst: Optional[dict] = None, path_report=None,
                verdict_key: str = "", verdict_detail: str = "",
                target_label: str = "", auto_findings: Sequence = (),
                switches: Sequence = (), comparisons: Sequence = (), speed=None,
+               usage=None,
                edges: Sequence = (), edge_note: str = "", pattern_note: str = "",
                edges_comparable: bool = True,
                links: Sequence = (), link_note: str = "",
@@ -735,9 +795,22 @@ def build_text(*, summary: dict, worst: Optional[dict] = None, path_report=None,
 
     if speed is not None and getattr(speed, "ok", False):
         lines.append("")
-        lines.append(f"{tr('speed.title')}: {format_mbps(speed.mbps)}"
-                     f"   {tr(tier_key(speed.mbps))}")
+        lines.append(f"{tr('speed.title')}:   "
+                     + "   ".join(f"{label} {value}" for label, value in speed_cells(speed)))
+        lines.append(f"  {tr(tier_key(speed.mbps))}")
+        grade = getattr(speed, "grade", "")
+        if grade:
+            lines.append(f"  {tr('speed.grade.' + grade.replace('+', 'plus'))}")
         lines.append(f"  {tr('speed.host')}: {speed.host}")
+
+    usage_table = usage_rows(usage)
+    if usage_table:
+        lines.append("")
+        lines.append(f"{tr('usage.title')}:   ({tr('usage.down')} / {tr('usage.up')} / "
+                     f"{tr('usage.total')})")
+        width = max(_width(period) for period, *_rest in usage_table)
+        for period, down, up, total in usage_table:
+            lines.append(f"  {_pad(period, width)}  {down:>9} / {up:>9} / {total:>9}")
 
     if edges:
         lines.append("")

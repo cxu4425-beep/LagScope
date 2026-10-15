@@ -37,7 +37,7 @@ class TrayIcon(QSystemTrayIcon):
         self.setContextMenu(menu)
 
     def update_sample(self, sample: Optional[LatencySample], status_text: str,
-                      stats=None) -> None:
+                      stats=None, usage_line: str = "") -> None:
         palette = palette_for(self._config.overlay.theme)
         value = sample.total_ms if (sample and sample.ok) else None
         level = presentation.level(value, self._config.thresholds,
@@ -51,4 +51,5 @@ class TrayIcon(QSystemTrayIcon):
                 self._last_key = key
                 self.setIcon(value_icon(text, color))
 
-        self.setToolTip(presentation.tooltip(sample, status_text, stats, APP_NAME))
+        self.setToolTip(presentation.tooltip(sample, status_text, stats, APP_NAME,
+                                             usage_line))
