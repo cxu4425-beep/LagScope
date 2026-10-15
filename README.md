@@ -2,35 +2,51 @@
 
 <img src="assets/icon.png" width="96" alt="LagScope">
 
-# LagScope · 延遲監視器
+# LagScope · 網路監視器
 
-**任何程式的即時延遲都能看：遊戲、通話、瀏覽器、下載——常駐在狀態列或畫面角落。**
-**對 B 站另外做了深度支援：自動跟著你正在看的直播間／影片，量到「伺服器 → 電腦 → 螢幕」。**
+**常駐在狀態列或畫面角落：網路延遲、丟包、上傳／下載速度、今天和這個月用了多少流量。**
+**打開就能用，什麼都不用設定。卡的時候，它告訴你是 Wi-Fi、家裡網路、電信商還是伺服器的錯。**
+
+也能量任何程式（遊戲、通話、瀏覽器）或任何伺服器；對 B 站直播／影片另有深度支援。
 
 免費開源 · 免登入 · 免安裝 exe · 支援 Windows / macOS / Linux · 简体 / 繁體 / English / 日本語 / 한국어
 
 **[▸ 介紹網站](https://cxu4425-beep.github.io/LagScope/)** · **[下載最新版](https://github.com/cxu4425-beep/LagScope/releases/latest)**
 
-[介紹網站](https://cxu4425-beep.github.io/LagScope/) · [功能](#-功能) · [安裝](#-安裝) · [使用](#-使用) · [網路體檢](#-網路體檢告訴你是誰的錯) · [歷史與報告](#-歷史走勢與一鍵體檢報告) · [前後對照](#-我改的設定有用嗎) · [自我檢測](#-自我檢測---selftest) · [CDN 節點](#-自動選最快的-cdn-節點) · [測網速](#-測一下這條線到底多快) · [伺服器在哪](#-你到底連到哪台伺服器) · [跟 ping 不一樣](#-為什麼跟-cmd-的-ping-不一樣) · [為什麼總是卡](#-為什麼總是會卡) · [手機](#-用手機看不用裝-app) · [自動偵測](#-自動跟隨我正在看的頁面) · [設定](#️-設定說明) · [更新與隱私](#-更新與隱私) · [常見問題](#-常見問題-faq) · [English](#english)
+[介紹網站](https://cxu4425-beep.github.io/LagScope/) · [功能](#-功能) · [安裝](#-安裝) · [使用](#-使用) · [流量用量](#-流量用量) · [網路體檢](#-網路體檢告訴你是誰的錯) · [歷史與報告](#-歷史走勢與一鍵體檢報告) · [前後對照](#-我改的設定有用嗎) · [自我檢測](#-自我檢測---selftest) · [CDN 節點](#-自動選最快的-cdn-節點) · [測網速](#-測一下這條線到底多快) · [伺服器在哪](#-你到底連到哪台伺服器) · [跟 ping 不一樣](#-為什麼跟-cmd-的-ping-不一樣) · [為什麼總是卡](#-為什麼總是會卡) · [手機](#-用手機看不用裝-app) · [自動偵測](#-自動跟隨我正在看的頁面) · [設定](#️-設定說明) · [更新與隱私](#-更新與隱私) · [常見問題](#-常見問題-faq) · [English](#english)
 
 <img src="docs/images/overlay-demo.gif" width="260" alt="懸浮窗即時變化">
 
-<em>延遲上去時數字和折線一起變色；右邊掛著的路由器和 DNS 還是綠的，一眼就知道問題不在你家。</em>
+<em>有人開始下載：延遲衝上 200 ms 變紅，同一時間 ↓ 從 3 Mbps 跳到 90 Mbps；下面的路由器一直是綠的 2 ms——一眼就知道是頻寬被佔滿，不是 Wi-Fi 壞了。</em>
 
 <br>
 
+<img src="docs/images/overlay-internet.png" width="232" alt="網路連線模式懸浮窗（預設）">
 <img src="docs/images/overlay-app.png" width="232" alt="任意應用模式懸浮窗">
-<img src="docs/images/overlay-dark.png" width="232" alt="直播模式懸浮窗">
-<img src="docs/images/overlay-video.png" width="232" alt="影片模式懸浮窗">
-<img src="docs/images/overlay-compact.png" width="212" alt="緊湊模式">
+<img src="docs/images/overlay-dark.png" width="232" alt="B 站直播模式懸浮窗">
 
-<em>左起：任意應用（延遲＋連線數＋上下行）、B 站直播、B 站影片（起播＋頻寬）、緊湊模式</em>
+<em>左起：我的網路連線（預設，什麼都不用填）、任意程式（加掛路由器／DNS／語音）、B 站直播</em>
 
 </div>
 
 ---
 
 ## ✨ 功能
+
+### 打開就能用：你的網路連線
+
+第一次打開時，設定精靈的第一個選項（也是預設）就是這個，直接按「開始使用」就好：
+
+- **網路延遲**：自動挑離你最近的公共伺服器（Cloudflare、Google、阿里 DNS、Quad9）量來回時間——
+  數字就是 `ping` 會印出來的那個，沒有加任何估算。每半小時、或連續失敗時會重新挑一次，
+  所以筆電換了網路、或某個位址被擋（例如 8.8.8.8 在中國大陸）都會自己換。
+- **丟包、上傳／下載速度**：懸浮窗和托盤提示一直顯示，一眼看出「是不是有別的東西在吃頻寬」。
+- **路由器一起看**：精靈會自動把你的路由器加成附加監測。延遲變紅時，路由器還是綠的＝問題在外面；
+  路由器也紅＝問題在家裡（多半是 Wi-Fi）。
+- **流量用量**：今天和這個月下載／上傳了多少，托盤選單第一行就是（見[流量用量](#-流量用量)）。
+- **測網速**：下載、上傳，加上**滿載延遲**——家裡有人下載時你的遊戲會不會卡，A+ 到 F 打分數
+  （見[測網速](#-測一下這條線到底多快)）。
+- **顏色看得懂**：網路延遲 80 ms 以內綠、150 ms 以內黃，再高就紅（設定 → 進階可改）。
 
 ### 任何程式都能測（不限 B 站）
 
@@ -46,13 +62,13 @@
 - **歷史走勢圖**：每分鐘存一行摘要，關掉程式也不會丟。回頭就看得出「昨晚九點特別卡」
   （見[歷史與報告](#-歷史走勢與一鍵體檢報告)）。
 - **一鍵體檢報告**：走勢圖＋分段診斷輸出成一個自包含的 HTML 檔，可以直接寄給客服或貼到論壇。
-- **測一下線有多快**：主動把線佔滿量真實下載速度，測的是**你正在看的那個 CDN**，有時間和流量雙上限，測速期間會自動在歷史上標記（見[測網速](#-測一下這條線到底多快)）。
+- **測一下線有多快**：主動把線佔滿量真實的下載、上傳速度和滿載延遲，有時間和流量雙上限，測速期間會自動在歷史上標記（見[測網速](#-測一下這條線到底多快)）。
 - **改了設定有沒有用**：標記「我剛剛換了 5GHz」，之後報告會用前後**一樣長**的時間窗口告訴你
   到底有沒有變好（見[前後對照](#-我改的設定有用嗎)）。
 - **卡頓時自動查原因**：探測失敗或延遲突增時，背景自動跑一次精簡診斷，把結論記在那一分鐘上——
   事後看得到「昨晚 9 點是 Wi-Fi 的問題」，而不只是「那時候卡過」。
-- **卡頓與延遲突增偵測**：探測失敗或延遲跳到平常的兩倍以上就記一次事件，
-  可選擇彈出提示（有冷卻時間，不會一直吵）。
+- **卡頓與延遲突增偵測**：探測失敗，或延遲**持續**高過這條線自己平常的水準（最近半小時的 99 百分位）
+  就記一次事件，可選擇彈出提示（有冷卻時間，不會一直吵）。單獨一筆高讀數不算——那是無線網路的日常。
 
 ### B 站深度支援
 
@@ -168,21 +184,21 @@ Windows 也可以直接雙擊 `packaging\build_windows.bat`（會自動建立虛
 
 ### 第一次啟動
 
-1. 執行程式後，狀態列（Windows 右下角 / macOS 選單列）會出現圖示，畫面上出現懸浮窗。
-2. **直接用瀏覽器打開任何 B 站直播間或影片**，監視器會自己認出來並開始量
-   （預設就是「自動跟隨我正在看的頁面」）。
-3. 想手動指定的話：在圖示或懸浮窗上按右鍵 → **設定…** → 把「監測對象」改成
-   「手動指定直播間」或「手動指定視頻」，再填內容。
+1. 第一次執行會出現設定精靈。**直接按「開始使用」**就好——預設就是「我的網路連線」，什麼都不用填。
+2. 狀態列（Windows 右下角 / macOS 選單列）會出現圖示，圖示上直接畫著目前的延遲毫秒數；
+   畫面角落出現懸浮窗，顯示延遲、上傳／下載速度、丟包和你的路由器。
+3. 想看別的東西：在圖示或懸浮窗上按右鍵 → **設定…** → 改「監測對象」。
 
-**監測對象**五種模式（設定 → 常規 → 監測對象）：
+**監測對象**六種模式（設定 → 常規 → 監測對象）：
 
 | 模式 | 說明 |
 | --- | --- |
-| **自動跟隨我正在看的頁面**（預設）| 自動偵測你在看哪個 B 站直播間／影片，換頁就跟著換 |
-| **手動指定直播間** | 只量你填的那個直播間，不受瀏覽器影響 |
-| **手動指定視頻** | 只量你填的那支影片（可指定分 P）|
+| **我的網路連線**（預設）| 自動挑最近的公共伺服器量延遲，顯示丟包和上下行速度。什麼都不用填 |
 | **任意應用程序** | 選一個程式（遊戲、通話、瀏覽器…），量它**實際連的伺服器** |
-| **自定義服務器地址** | 直接填 IP／網域＋連接埠，例如遊戲伺服器、`8.8.8.8` |
+| **自定義服務器地址** | 直接填 IP／網域＋連接埠，例如遊戲伺服器、公司 VPN |
+| **B 站：自動跟隨我正在看的頁面** | 自動偵測你在看哪個 B 站直播間／影片，換頁就跟著換 |
+| **B 站：手動指定直播間** | 只量你填的那個直播間，不受瀏覽器影響 |
+| **B 站：手動指定視頻** | 只量你填的那支影片（可指定分 P）|
 
 填寫格式都很寬鬆：
 
@@ -191,7 +207,10 @@ Windows 也可以直接雙擊 `packaging\build_windows.bat`（會自動建立虛
 - 應用程式：從下拉選單挑（會列出正在連網的程式和它的連線數），或直接打 `game.exe`；
   也可以勾「自動跟隨當前使用的程序」，切到哪個視窗就量哪個。
 
-全部留空、又關掉自動偵測時，進入**僅網路模式**，只量到 B 站伺服器的網路延遲。
+B 站自動跟隨模式下暫時沒有在看任何頁面時，會先顯示你的網路連線延遲，等你打開頁面再切過去。
+
+**網路類的數字（網路連線、程式、伺服器位址）就是來回時間，跟 `ping` 一樣**，不會加上顯示或耳機的估算；
+那些只算進 B 站直播／影片的「總延遲」裡，因為那才是「畫面晚了多久」。
 
 ### 量任何程式（遊戲／通話／下載…）
 
@@ -500,27 +519,36 @@ lagscope --selftest 21452505     # 帶一個正在直播的房間號，涵蓋全
 它能回答「是不是有別的東西在吃頻寬」，但回答不了「這條線最快能跑多少」，
 因為那個當下根本沒有人在要求它跑快。
 
-托盤選單的 **測一下網速…** 會真的去要求：
+托盤選單的 **測一下網速…** 會真的去要求——先下載、再上傳，旁邊一直量著延遲：
 
 ```
 下載速度：94.2 Mbps
+上傳速度：21.5 Mbps
+閒置延遲：12 ms
+滿載延遲：180 ms　（等級 C）
+滿載時延遲大增（緩衝膨脹）：家裡有人下載或上傳時，遊戲和通話會卡。路由器開啟 SQM／QoS 通常能大幅改善。
 
 足夠 4K（25 Mbps 以上）
 
-測的是你正在看的那個 CDN——也就是真正影響你的那條路。
-用掉 80 MB，花了 9 秒。
+測速點：Cloudflare 公開測速服務（離你最近的節點）。
+用掉 120 MB，花了 20 秒。
 ```
+
+**滿載延遲是最有用的那一行。** 頻寬夠不夠，一般測速網站都會告訴你；但「為什麼家裡有人下載時我的遊戲就卡」，
+答案幾乎都是路由器把封包排成一長串（緩衝膨脹，bufferbloat）。測速時旁邊同時在量延遲，
+那些探測封包會跟遊戲、通話的封包一樣排在後面，所以量到的就是你實際會遇到的狀況。
+等級照公開測試通用的標準：增加 5 ms 以內 A+、30 A、60 B、200 C、400 D，再多就是 F。
 
 有兩件事比那個數字本身更重要，所以按下去之前會先問你一次：
 
 | | |
 | --- | --- |
 | **它會把線佔滿** | 測的時候延遲一定會飆高、直播可能會卡。**這是它自己造成的**，所以它會先在歷史紀錄上標一筆「測速（延遲飆高是正常的）」，免得你等一下看走勢圖，把自己造成的那根尖峰當成故障在查。 |
-| **它會用掉流量** | 預設**時間和流量各有上限**（10 秒 / 80 MB），先到哪個就停哪個。所以千兆的線是停在 80 MB，不會因為「跑滿 10 秒」而拉掉一個 GB。兩個上限都可以在設定裡改。 |
+| **它會用掉流量** | 預設**時間和流量各有上限**（每個方向 10 秒；總共 80 MB，上傳用一半），先到哪個就停哪個。所以千兆的線是停在上限，不會因為「跑滿 10 秒」而拉掉一個 GB。兩個上限都可以在設定裡改。 |
 
-**它去哪裡下載是刻意的**：優先用**你正在看的那個 CDN 節點**，因為會不會卡取決於你到那台機器的那條路，
-而不是取決於你到某個測速網站的那條路——那兩條路常常根本不同家。真的沒有在看東西時，
-才退回公開測速點（Cloudflare）。
+**它去哪裡下載是刻意的**：在看 B 站的時候，下載用**你正在看的那個 CDN 節點**，因為會不會卡取決於你到那台機器的那條路，
+而不是取決於你到某個測速網站的那條路——那兩條路常常根本不同家。其他時候（以及所有的上傳）
+用 Cloudflare 的公開測速服務，它會自動接到離你最近的節點。
 
 結果會寫進體檢報告裡，所以寄給客服的那份會同時有「延遲多少」和「線多快」。
 沒有 GUI 的話用 `lagscope --speedtest`。
@@ -528,6 +556,24 @@ lagscope --selftest 21452505     # 帶一個正在直播的房間號，涵蓋全
 **關於 TCP 慢啟動**：連線剛建立的頭一秒鐘一定慢，把那一秒算進去會讓快的線看起來很平庸。
 所以開頭那段是**單獨算完丟掉**的，只有暖機後的那段算數。真的太快結束（檔案太小或線太慢）
 連暖機都沒跑完時，它會直接跟你說「這個數字可能偏低」，而不是假裝那就是你的線速。
+
+---
+
+## 📊 流量用量
+
+托盤選單第一行、托盤圖示的提示、延遲歷史視窗和體檢報告裡都有：
+
+```
+今天 ↓1.52 GB ↑231 MB · 本月 ↓34.0 GB ↑5.10 GB
+```
+
+適合用手機熱點、有流量上限的方案、或宿舍網路超過多少 GB 就降速的人。
+
+- 算的是**整台電腦所有網卡**收發的量（不只某一個程式），用跟網速同一份系統計數器。
+- **只在程式開著的時候算**。關著的時候用掉的不會算進來，也不會用猜的補上——所以建議勾「開機自動啟動」。
+- 照**你那邊的日期**換日、換月（跟電信商帳單一樣），單位用 1000 進位（GB 跟帳單一致）。
+- 每天一行，存在設定資料夾的 `usage.json`，保留一年多；跟延遲歷史分開，所以把歷史關掉也不影響。
+- 測網速用掉的流量也會算進去——那是真的用掉的。
 
 ---
 
@@ -808,7 +854,7 @@ lagscope --why-ping [主機]             # ICMP 和 TCP 並排量,說明為什�
 
 | 項目 | 說明 |
 | --- | --- |
-| 監測對象 | 自動跟隨 / 直播間 / 視頻 / 任意應用程序 / 自定義服務器地址 |
+| 監測對象 | 我的網路連線（預設）/ 任意應用程序 / 自定義服務器地址 / B 站自動跟隨 / B 站直播間 / B 站視頻 |
 | 應用程序 | 「任意應用程序」模式要量哪個程式，可勾自動跟隨前景程式 |
 | 服務器地址 / 端口 | 「自定義服務器地址」模式要量的目標 |
 | 顯示全機上傳／下載速度 | 每筆樣本附帶網速（可關）|
@@ -842,14 +888,15 @@ lagscope --why-ping [主機]             # ICMP 和 TCP 並排量,說明為什�
 | --- | --- |
 | 請求超時 | 單次 HTTP / TCP 探測的等待上限 |
 | 播放地址刷新 | 播放 URL 會過期，預設每 240 秒重取一次 |
-| RTT 探測主機 | 沒設定房間時，用來量網路延遲的主機 |
+| RTT 探測主機 | B 站節點不回應握手時，改用來量網路延遲的主機（「我的網路連線」模式不用它，會自動挑公共伺服器）|
 | 自動選最快的 CDN 節點 | 定期比較所有節點，明顯更快就換過去（預設開啟） |
 | 優先使用 HLS | 開啟（預設）才能拿到帶伺服器時鐘的「實測」延遲 |
 | 播放器緩衝分片數 | 估算播放器要墊多少緩衝，預設 1 個分片 |
 | 合成器排隊幀數 | 顯示延遲模型的排隊層數，預設 2 |
 | 顯示器輸入延遲補償 | 你的螢幕面板延遲（可查評測），預設 0 |
 | 總延遲包含顯示延遲 | 關掉後總延遲只算到「客戶端拿到影格」為止 |
-| 綠色 / 黃色門檻 | 顏色變化的門檻，預設 2000 / 5000 ms |
+| 網路延遲：綠色到 / 黃色到 | 網路連線、程式、伺服器位址和所有附加監測的顏色門檻，預設 80 / 150 ms |
+| B 站直播延遲：綠色到 / 黃色到 | B 站直播／影片「總延遲」的顏色門檻，預設 2000 / 5000 ms（那是秒級的數字）|
 | 記錄到 CSV | 把每一筆樣本寫進 `logs/latency.csv`（自動輪替，保留 3 份） |
 | 保存延遲歷史 | 每分鐘一行摘要，走勢圖和體檢報告的資料來源；可改保留時長（預設 48 小時） |
 | 卡頓時自動查原因 | 偵測到卡頓／突增時背景跑一次精簡診斷，把結論記進歷史（最多 10 分鐘一次） |
@@ -896,11 +943,12 @@ lagscope --why-ping [主機]             # ICMP 和 TCP 並排量,說明為什�
 | 連到哪裡 | 什麼時候 | 為什麼 |
 | --- | --- | --- |
 | 你正在監測的對象 | 每次探測 | 就是要量它的延遲 |
+| `1.1.1.1`、`8.8.8.8`、`223.5.5.5`、`9.9.9.9` | 「我的網路連線」模式的每次探測，以及測網速時 | 只做 TCP 握手（443 埠）或 ping 來計時，**不送任何查詢內容**；四個都是公共 DNS 服務，挑最近的一個 |
 | B 站公開 API | 只在監測 B 站直播／影片時 | 取播放位址和房間資訊（免登入、不帶 Cookie） |
 | 你的路由器／第一跳／目標 | 按下體檢，或卡頓時自動查 | 分段診斷（系統內建 ping） |
 | GitHub Releases | 每天最多一次，可關 | 查最新版本號 |
 | GitHub 的檔案伺服器 | **只在你按下「直接更新」時** | 下載那一個安裝程式（會核對 sha256） |
-| `speed.cloudflare.com` | **只在你按下測速、而且當下沒在看任何東西時** | 公開測速點；有在看東西時測的是那個 CDN，不會連這裡 |
+| `speed.cloudflare.com` | **只在你按下測速時** | 公開測速點：上傳一定用它，下載在沒看 B 站時用它（看 B 站時下載測的是那個 CDN）。上傳的內容是全零的填充資料 |
 
 沒有統計、沒有回報、沒有帳號、沒有 Cookie。
 
@@ -1048,16 +1096,29 @@ MIT License，詳見 [LICENSE](LICENSE)。
 
 # English
 
-**Latency Monitor** shows, in real time, the latency of **any application** — a game, a
-voice call, a browser, a download — in an always-on-top overlay and/or a status-bar
-(tray) icon that draws the number right on itself. Bilibili gets extra depth on top:
-it follows whatever you are watching (live rooms and ordinary videos alike) and
-measures server → client → screen.
+**LagScope** is a free network monitor that sits in your status bar or a corner of the
+screen: latency, packet loss, upload / download speed, and how much data you have used
+today and this month. It works the moment you open it - nothing to fill in - and when
+things stutter it tells you whether it is your Wi-Fi, your home network, your provider or
+the server. It can also watch any application or server, and has deep support for
+Bilibili live streams and videos.
 
 **[▸ Project site](https://cxu4425-beep.github.io/LagScope/)** ·
 **[Download the latest release](https://github.com/cxu4425-beep/LagScope/releases/latest)**
 
 ### Highlights
+
+**Your connection, with nothing to set up** (the default)
+
+- **Latency** to the nearest of a few anycast services (Cloudflare, Google, AliDNS, Quad9),
+  chosen automatically and re-chosen every half hour or after repeated failures - the number
+  `ping` would print, with nothing estimated added.
+- **Loss, upload and download speed** always in view; **your router** is added alongside, so
+  red latency with a green router means the problem is outside your home.
+- **Data usage** today and this month, at the top of the tray menu.
+- **Speed test**: download, upload and **latency under load**, graded A+ to F - the answer to
+  "why does my game lag when someone downloads".
+- Colours on a ping scale: green to 80 ms, yellow to 150 ms.
 
 **Any application**
 
@@ -1068,8 +1129,9 @@ measures server → client → screen.
 - **A server address you type**: a game server, a VPN gateway, `8.8.8.8`.
 - **Machine upload / download speed** on every sample, so you can see when something else
   is eating the line.
-- **Stall and spike detection**: a failed probe, or latency jumping past twice its recent
-  normal, is recorded as an event and can raise one (rate-limited) notification.
+- **Stall and spike detection**: a failed probe, or latency that *stays* above this line's
+  own recent 99th percentile, is recorded as an event and can raise one (rate-limited)
+  notification. A single high reading is not an event - that is what wireless does.
 - **History and a report**: one summary row per minute is kept on disk, so the chart shows
   the evening that went wrong days later - and exports as a self-contained HTML report
   (see [History and report](#history-and-report)).
@@ -1177,21 +1239,26 @@ The `↓46.8M` in the status row is *passive* - what the machine happens to be m
 now. That answers "is something else eating my bandwidth" and cannot answer "how fast could
 this line go", because nothing was asking it to go fast.
 
-**Speed test** in the tray menu does ask. Two things about it matter more than the number,
-which is why it asks for confirmation first:
+**Speed test** in the tray menu does ask: it downloads, then uploads, timing the round trip
+beside each phase. The result is download, upload, idle latency and latency under load, graded
+on the scale the public tests use (A+ under 5 ms of growth, then 30 / 60 / 200 / 400 ms, F
+beyond). That last line is usually the useful one: when everything lags as soon as someone
+downloads, the cause is almost always the router queueing packets (bufferbloat), and SQM / QoS
+on the router is the fix.
+
+Two things about it matter more than the numbers, which is why it asks for confirmation first:
 
 **It saturates the line while it runs.** Latency spikes and the stream may stutter. Because
 that is self-inflicted, the app marks those minutes in the history first, so the spike is not
 later investigated as a fault.
 
-**It costs data.** Time *and* bytes are both capped - 10 seconds or 80 MB by default,
-whichever comes first - so a gigabit line stops at the byte cap instead of pulling down a
-gigabyte to fill its ten seconds. Both limits are settings.
+**It costs data.** Time *and* bytes are both capped - 10 seconds per direction and 80 MB in
+total by default (upload gets half), whichever comes first - so a gigabit line stops at the
+byte cap instead of pulling down a gigabyte to fill its ten seconds. Both limits are settings.
 
-Where it downloads from is deliberate: the CDN edge already serving what you are watching,
-because whether you stutter depends on the path to *that* machine, not on the path to a speed
-test site - they are frequently not even the same carrier. Only when nothing is being watched
-does it fall back to a public endpoint (Cloudflare).
+Where it downloads from is deliberate: while you watch Bilibili, the CDN edge already serving
+it, because whether you stutter depends on the path to *that* machine. Otherwise - and for
+every upload - Cloudflare's public speed test, which answers from its nearest site.
 
 The result is included in the exported report, so the file you send to support carries both
 the latency and the line speed. Headless: `lagscope --speedtest`.
@@ -1200,6 +1267,15 @@ The opening second of any connection is slow, and averaging TCP slow start in ma
 line look mediocre, so that stretch is measured separately and discarded. When a download
 ends before the warm-up finishes it says the figure may read low rather than presenting it
 as the line speed.
+
+### Data usage
+
+At the top of the tray menu, in the tray icon's hover text, the history window and the report:
+`Today ↓1.52 GB ↑231 MB · Month ↓34.0 GB ↑5.10 GB`. Everything the machine sent and received,
+on every adapter, from the same counters as the speed. Counted only while LagScope runs -
+traffic while it was closed is not included or estimated - and rolled over at your local
+midnight and month, the way a plan bills. One line per day in `usage.json`, kept a bit over a
+year, separate from the latency history.
 
 ### Which server you were assigned
 
@@ -1266,11 +1342,13 @@ redirects), a digest mismatch deletes the file, an asset with no published diges
 as a link rather than installed, and a portable copy never rewrites itself - it opens the
 download page, as before.
 
-That is the entire list of things it talks to: whatever you are measuring, Bilibili's public
-API (only in Bilibili mode, no login and no cookies), your own router and first hop during a
-path check, and the releases page. A speed test started while nothing is being watched
-also reaches speed.cloudflare.com; started while something is, it measures that CDN and
-does not. No analytics, no accounts, no telemetry.
+That is the entire list of things it talks to: whatever you are measuring; in the default
+internet mode and during a speed test, 1.1.1.1, 8.8.8.8, 223.5.5.5 and 9.9.9.9 - a TCP
+handshake on 443 or a ping, timed, with no query ever sent; Bilibili's public API (only in
+Bilibili mode, no login and no cookies); your own router and first hop during a path check;
+the releases page; and, only when you start a speed test, speed.cloudflare.com (every upload,
+and the download unless you are watching Bilibili, when it measures that CDN instead; the
+upload is zero-filled padding). No analytics, no accounts, no telemetry.
 
 ### History and report
 
@@ -1361,10 +1439,10 @@ Build your own executable: `pip install -r requirements-dev.txt && python packag
 
 ### Usage
 
-Just open a Bilibili live room or video in your browser — the monitor picks it up on
-its own. To pin it to one thing instead, right-click the tray icon (or the overlay) →
-**Settings** → set "What to monitor" to a live room or a video and paste an id or URL.
-With nothing selected and detection off it runs in network-only mode. Handy flags:
+Press **Start** in the first-run wizard and it is watching your internet connection - nothing
+to fill in. To watch something else, right-click the tray icon (or the overlay) →
+**Settings** → "What to monitor": an application, a server address, or one of the Bilibili
+modes (follow what I watch, a live room, a video). Handy flags:
 
 ```bash
 lagscope --lang en --room 21452505     # language + room (detection off)

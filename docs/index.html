@@ -752,11 +752,13 @@ footer { padding: 20px 0 72px; }
         <thead><tr><th>連到哪裡</th><th>什麼時候</th><th>為什麼</th></tr></thead>
         <tbody>
           <tr><td>你正在監測的對象</td><td>每次探測</td><td>就是要量它的延遲</td></tr>
+          <tr><td class="host">1.1.1.1 · 8.8.8.8<span>223.5.5.5 · 9.9.9.9</span></td>
+              <td>「我的網路連線」模式、測速時</td><td>只做握手或 ping 來計時，不送任何查詢；挑最近的一個</td></tr>
           <tr><td class="host">api.live.bilibili.com<span>api.bilibili.com</span></td>
               <td>只在監測 B 站時</td><td>取播放位址（免登入、不帶 Cookie）</td></tr>
           <tr><td>你的路由器／第一跳</td><td>按下體檢，或卡頓時</td><td>分段診斷（系統內建 ping）</td></tr>
           <tr><td class="host">api.github.com</td><td>每天最多一次，可關</td><td>查最新版本號</td></tr>
-          <tr><td class="host">speed.cloudflare.com</td><td>只在你按測速、且沒在看東西時</td><td>公開測速點</td></tr>
+          <tr><td class="host">speed.cloudflare.com</td><td>只在你按測速時</td><td>公開測速點（上傳一定用它；看 B 站時下載改測那個 CDN）</td></tr>
         </tbody>
       </table>
     </div>

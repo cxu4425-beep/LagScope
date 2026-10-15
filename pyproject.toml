@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lagscope"
 dynamic = ["version"]
-description = "Real-time latency monitor for any app, with deep Bilibili live/video support: server -> client -> screen, in an overlay or the status bar."
+description = "Network monitor for the status bar or an overlay: latency, packet loss, upload/download speed and data usage, a speed test with a bufferbloat grade, and a diagnosis of whose fault a stutter is. Deep Bilibili live/video support."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
-keywords = ["bilibili", "latency", "live", "overlay", "monitor", "ping", "network", "gaming", "延迟", "直播", "网速"]
+keywords = ["network monitor", "latency", "ping", "packet loss", "speed test", "bufferbloat", "data usage", "overlay", "gaming", "bilibili", "延迟", "网速", "流量"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Environment :: X11 Applications :: Qt",
