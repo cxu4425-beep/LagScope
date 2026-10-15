@@ -285,10 +285,13 @@ class _UploadServer:
 def test_upload_is_measured_at_roughly_the_rate_the_line_takes(session):
     server = _UploadServer(bytes_per_s=4 * 1024 * 1024)     # ~33.5 Mbps
     with server as url:
-        result = speed.measure_upload(session, url, budget_s=3.0, max_bytes=10 ** 12)
+        # Long enough that the kernel's send buffer - several MB on Windows and
+        # macOS, accepted before the server has read a byte - is a small share
+        # of what is measured rather than an inflation of it.
+        result = speed.measure_upload(session, url, budget_s=5.0, max_bytes=10 ** 12)
 
     assert result.ok and result.warmed
-    assert 20.0 <= result.mbps <= 50.0
+    assert result.mbps == pytest.approx(33.5, rel=0.5)
     assert result.bytes > 0
 
 
@@ -359,7 +362,9 @@ def test_without_an_idle_figure_there_is_no_grade():
 
 def test_a_whole_run_against_local_servers(session):
     pings = iter([20.0] * 5 + [70.0] * 1000)
-    with _Server(bytes_per_s=8 * 1024 * 1024) as down_url, \
+    # A wide gap between the directions: an upload's first second can be
+    # inflated by whatever the kernel's send buffer swallowed up front.
+    with _Server(bytes_per_s=32 * 1024 * 1024) as down_url, \
             _UploadServer(bytes_per_s=2 * 1024 * 1024) as up_url:
         report = speed.run_speed_test(session, down_url, budget_s=2.0,
                                       max_bytes=10 ** 12, ping=lambda: next(pings),
