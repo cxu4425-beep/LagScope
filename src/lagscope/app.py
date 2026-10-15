@@ -41,7 +41,6 @@ from .single_instance import SingleInstance
 from .update import RELEASES_PAGE, UpdateInfo, check as check_for_update
 from .web import DashboardServer
 from .ui.icons import app_icon
-from .probes.speed import tier_key
 from .ui.theme import format_mbps, format_ms
 from .ui.overlay import OverlayWindow
 from .ui.history_window import HistoryWindow
@@ -540,22 +539,10 @@ class MonitorApplication(QObject):
         QMessageBox.information(None, tr("speed.title"), self._speed_text(result))
 
     def _speed_text(self, result) -> str:
-        """The number, what it can carry, and what it cost to find out."""
+        """The numbers, what they mean, and what it cost to find out."""
         if not result.ok:
             return f"{tr('speed.failed')}\n{result.error or ''}".strip()
-        lines = [
-            f"{tr('speed.result', value=format_mbps(result.mbps))}",
-            "",
-            tr(tier_key(result.mbps)),
-            "",
-            tr("speed.source_stream") if result.source == "stream"
-            else tr("speed.source_public"),
-            tr("speed.cost", megabytes=f"{result.bytes / 1024 / 1024:.0f}",
-               seconds=f"{result.seconds:.0f}"),
-        ]
-        if not result.warmed:
-            lines.append(tr("speed.short"))
-        return "\n".join(lines)
+        return presentation.speed_summary(result)
 
     def mark_moment(self) -> None:
         """Record "I changed something", so the effect can be measured later."""

@@ -642,21 +642,32 @@ JA: dict = {
     ),
     "speed.title": "速度テスト",
     "speed.host": "測定先",
-    "speed.confirm": "帯域を使い切って {seconds} 秒ダウンロードします（最大 {megabytes} MB）。"
-                     "その間は遅延が跳ね上がり、配信が止まることもあります——"
+    "speed.confirm": "全速でダウンロード、続いてアップロードをそれぞれ {seconds} 秒行い"
+                     "（合計最大 {megabytes} MB）、負荷時の遅延も測ります。"
+                     "その間は遅延が跳ね上がり、配信や通話が止まることもあります——"
                      "それはこのテストのせいで、回線の異常ではありません。\n\n"
-                     "視聴中の CDN からダウンロードします（何も見ていないときだけ公開測定点）。"
+                     "ダウンロードは視聴中の B站 CDN（なければ Cloudflare）、アップロードは Cloudflare を使います。"
                      "開始しますか？",
     "speed.running": "測定中です。遅延の数値はしばらく無視してください…",
     "speed.result": "ダウンロード速度：{value}",
+    "speed.result_up": "アップロード速度：{value}",
+    "speed.up_failed": "アップロードのテストを完了できませんでした",
+    "speed.idle": "アイドル時の遅延：{value}",
+    "speed.loaded": "負荷時の遅延：{value}　（評価 {grade}）",
+    "speed.grade.Aplus": "負荷をかけても遅延はほぼ変わりません。ダウンロード中のゲームや通話も問題ありません。",
+    "speed.grade.A": "負荷時の遅延の増加はわずかで、普段は気づきません。",
+    "speed.grade.B": "負荷時に遅延がはっきり増えます。誰かがダウンロード中だとゲームで時々感じます。",
+    "speed.grade.C": "負荷時に遅延が大きく増えます（バッファーブロート）。誰かが送受信するとゲームや通話が乱れます。ルーターの SQM／QoS で大きく改善することが多いです。",
+    "speed.grade.D": "負荷時に遅延が激増します（深刻なバッファーブロート）。何かを転送している間はリアルタイムのアプリがほぼ使えません。ルーターで SQM／QoS を有効にしてください。",
+    "speed.grade.F": "負荷時の遅延が切断寸前です。転送があるとほかがすべて止まります。ルーターで SQM／QoS を有効にするか、回線事業者に相談してください。",
     "speed.failed": "速度テストを完了できませんでした",
     "speed.source_stream": "視聴中の CDN を測りました——実際に効いてくる経路です。",
-    "speed.source_public": "何も視聴していないため、公開測定点（Cloudflare）を使いました。",
+    "speed.source_public": "Cloudflare の公開速度テスト（最寄りの拠点）で測りました。",
     "speed.cost": "{megabytes} MB を {seconds} 秒で使用しました。",
     "speed.short": "（TCP が全速に達する前に終わったため、低めに出ている可能性があります。）",
     "speed.marker": "速度テスト（遅延の急増はこれが原因）",
     "speed.budget": "測定時間（秒）",
-    "speed.max_mb": "最大ダウンロード量（MB）",
+    "speed.max_mb": "最大使用量（MB、アップロードはその半分）",
     "speed.group": "速度テスト",
     "speed.hint": "どちらかの上限に達した時点で終わるので、"
                   "高速回線でも 1 GB を引き落とすことはありません。",
@@ -1295,21 +1306,32 @@ KO: dict = {
     ),
     "speed.title": "속도 측정",
     "speed.host": "측정 대상",
-    "speed.confirm": "대역폭을 모두 써서 {seconds}초 동안 내려받습니다(최대 {megabytes} MB). "
-                     "그동안 지연이 치솟고 방송이 끊길 수 있는데, 이 측정 때문이지 "
+    "speed.confirm": "전속력으로 내려받고 이어서 올리기를 각각 {seconds}초 동안 하며"
+                     "(합계 최대 {megabytes} MB), 부하 중 지연도 잽니다. "
+                     "그동안 지연이 치솟고 방송이나 통화가 끊길 수 있는데, 이 측정 때문이지 "
                      "회선에 문제가 생긴 것이 아닙니다.\n\n"
-                     "보고 있는 CDN에서 내려받습니다(아무것도 보고 있지 않을 때만 공개 측정 서버). "
+                     "다운로드는 보고 있는 B站 CDN(없으면 Cloudflare), 업로드는 Cloudflare를 씁니다. "
                      "시작할까요?",
     "speed.running": "측정 중입니다. 잠시 지연 수치는 무시하세요…",
     "speed.result": "다운로드 속도: {value}",
+    "speed.result_up": "업로드 속도: {value}",
+    "speed.up_failed": "업로드 측정을 끝내지 못했습니다",
+    "speed.idle": "유휴 지연: {value}",
+    "speed.loaded": "부하 중 지연: {value}  (등급 {grade})",
+    "speed.grade.Aplus": "부하가 걸려도 지연이 거의 그대로입니다. 다운로드 중 게임이나 통화도 문제없습니다.",
+    "speed.grade.A": "부하 중 지연이 조금 늘지만 평소에는 느끼지 못합니다.",
+    "speed.grade.B": "부하 중 지연이 눈에 띄게 늘어납니다. 누군가 내려받는 동안 게임에서 가끔 느껴집니다.",
+    "speed.grade.C": "부하 중 지연이 크게 늘어납니다(버퍼블로트). 누군가 주고받기만 하면 게임과 통화가 끊깁니다. 공유기의 SQM／QoS를 켜면 대부분 크게 나아집니다.",
+    "speed.grade.D": "부하 중 지연이 폭증합니다(심한 버퍼블로트). 무언가 전송 중이면 실시간 앱은 거의 쓸 수 없습니다. 공유기에서 SQM／QoS를 켜세요.",
+    "speed.grade.F": "부하 중 지연이 끊김 직전입니다. 전송이 있으면 나머지가 모두 멈춥니다. 공유기에서 SQM／QoS를 켜거나 통신사에 문의하세요.",
     "speed.failed": "속도 측정을 끝내지 못했습니다",
     "speed.source_stream": "보고 있는 CDN을 측정했습니다 — 실제로 영향을 주는 경로입니다.",
-    "speed.source_public": "보고 있는 것이 없어 공개 측정 서버(Cloudflare)를 썼습니다.",
+    "speed.source_public": "Cloudflare 공개 속도 측정(가장 가까운 거점)으로 측정했습니다.",
     "speed.cost": "{megabytes} MB를 {seconds}초 동안 사용했습니다.",
     "speed.short": "(TCP가 최고 속도에 이르기 전에 끝나 실제보다 낮게 나왔을 수 있습니다.)",
     "speed.marker": "속도 측정 (지연 급증은 이 때문)",
     "speed.budget": "측정 시간(초)",
-    "speed.max_mb": "최대 다운로드(MB)",
+    "speed.max_mb": "최대 사용량(MB, 업로드는 절반)",
     "speed.group": "속도 측정",
     "speed.hint": "두 상한 중 먼저 도달하는 쪽에서 멈추므로, "
                   "기가 회선이라도 1 GB를 끌어내리지 않습니다.",

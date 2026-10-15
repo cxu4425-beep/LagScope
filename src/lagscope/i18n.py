@@ -1122,21 +1122,59 @@ STRINGS: dict[str, tuple[str, str, str]] = {
     "speed.title": ("网速测试", "網速測試", "Speed test"),
     "speed.host": ("测速对象", "測速對象", "Server measured"),
     "speed.confirm": (
-        "这会用尽全部带宽下载 {seconds} 秒（最多 {megabytes} MB），期间延迟会飙高、"
-        "直播可能会卡——这是它自己造成的，不是你的网络出问题。\n\n"
-        "会从你正在看的那个 CDN 下载（没有在看东西时才用公开测速点）。要开始吗？",
-        "這會用盡全部頻寬下載 {seconds} 秒（最多 {megabytes} MB），期間延遲會飆高、"
-        "直播可能會卡——這是它自己造成的，不是你的網路出問題。\n\n"
-        "會從你正在看的那個 CDN 下載（沒有在看東西時才用公開測速點）。要開始嗎？",
-        "This downloads flat out for {seconds} seconds (at most {megabytes} MB). "
-        "Latency will spike and the stream may stutter while it runs - that is this "
-        "test doing it, not your connection failing.\n\n"
-        "It downloads from the CDN you are already watching, or a public endpoint "
-        "when there is nothing to watch. Start?",
+        "这会先全速下载、再全速上传，各 {seconds} 秒（总共最多 {megabytes} MB），同时测满载时的延迟。"
+        "期间延迟会飙高、直播或通话可能会卡——这是测速自己造成的，不是你的网络出问题。\n\n"
+        "下载会用你正在看的 B 站 CDN（没有时用 Cloudflare 公开测速点），上传用 Cloudflare。要开始吗？",
+        "這會先全速下載、再全速上傳，各 {seconds} 秒（總共最多 {megabytes} MB），同時測滿載時的延遲。"
+        "期間延遲會飆高、直播或通話可能會卡——這是測速自己造成的，不是你的網路出問題。\n\n"
+        "下載會用你正在看的 B 站 CDN（沒有時用 Cloudflare 公開測速點），上傳用 Cloudflare。要開始嗎？",
+        "This downloads and then uploads flat out, {seconds} seconds each (at most {megabytes} MB "
+        "in total), timing latency under load as it goes. Latency will spike and a stream or call "
+        "may stutter meanwhile - that is the test doing it, not your connection failing.\n\n"
+        "Download uses the Bilibili CDN you are watching (or Cloudflare's public endpoint); "
+        "upload uses Cloudflare. Start?",
     ),
     "speed.running": ("正在测速，先别管延迟数字…", "正在測速，先別管延遲數字…",
                       "Testing - ignore the latency figure for a moment…"),
     "speed.result": ("下载速度：{value}", "下載速度：{value}", "Download: {value}"),
+    "speed.result_up": ("上传速度：{value}", "上傳速度：{value}", "Upload: {value}"),
+    "speed.up_failed": ("上传测试没有完成", "上傳測試沒有完成", "Upload: the test did not finish"),
+    "speed.idle": ("空闲延迟：{value}", "閒置延遲：{value}", "Idle latency: {value}"),
+    "speed.loaded": ("满载延迟：{value}　（等级 {grade}）", "滿載延遲：{value}　（等級 {grade}）",
+                     "Latency under load: {value}  (grade {grade})"),
+    "speed.grade.Aplus": (
+        "满载时延迟几乎不变——一边下载一边打游戏、视频通话都没问题。",
+        "滿載時延遲幾乎不變——一邊下載一邊打遊戲、視訊通話都沒問題。",
+        "Latency barely moves under load - gaming or calling during a download is fine.",
+    ),
+    "speed.grade.A": (
+        "满载时延迟只多一点，正常使用感觉不出来。",
+        "滿載時延遲只多一點，正常使用感覺不出來。",
+        "Latency rises a little under load; you will not notice it in normal use.",
+    ),
+    "speed.grade.B": (
+        "满载时延迟明显变高，有人在下载时打游戏会偶尔感觉到。",
+        "滿載時延遲明顯變高，有人在下載時打遊戲會偶爾感覺到。",
+        "Latency rises noticeably under load; games may feel it while someone downloads.",
+    ),
+    "speed.grade.C": (
+        "满载时延迟大增（缓冲膨胀）：家里有人下载或上传时，游戏和通话会卡。路由器开启 SQM／QoS 通常能大幅改善。",
+        "滿載時延遲大增（緩衝膨脹）：家裡有人下載或上傳時，遊戲和通話會卡。路由器開啟 SQM／QoS 通常能大幅改善。",
+        "Latency jumps under load (bufferbloat): games and calls will stutter whenever "
+        "someone downloads or uploads. Turning on SQM / QoS on the router usually fixes most of it.",
+    ),
+    "speed.grade.D": (
+        "满载时延迟暴增（严重缓冲膨胀）：只要有人在传东西，即时应用基本没法用。强烈建议在路由器开启 SQM／QoS。",
+        "滿載時延遲暴增（嚴重緩衝膨脹）：只要有人在傳東西，即時應用基本沒法用。強烈建議在路由器開啟 SQM／QoS。",
+        "Latency explodes under load (severe bufferbloat): real-time apps are unusable whenever "
+        "anything is transferring. Turn on SQM / QoS on the router.",
+    ),
+    "speed.grade.F": (
+        "满载时延迟高到接近断线：任何上传或下载都会让其他东西全部卡住。请在路由器开启 SQM／QoS，或联系电信商。",
+        "滿載時延遲高到接近斷線：任何上傳或下載都會讓其他東西全部卡住。請在路由器開啟 SQM／QoS，或聯絡電信商。",
+        "Latency under load is close to a dropped connection: any transfer stalls everything "
+        "else. Turn on SQM / QoS on the router, or talk to your provider.",
+    ),
     "speed.failed": ("测速失败", "測速失敗", "The speed test did not finish"),
     "speed.source_stream": (
         "测的是你正在看的那个 CDN——也就是真正影响你的那条路。",
@@ -1144,9 +1182,9 @@ STRINGS: dict[str, tuple[str, str, str]] = {
         "Measured against the CDN you are watching - the path that actually matters.",
     ),
     "speed.source_public": (
-        "没有在看东西，所以用了公开测速点（Cloudflare）。",
-        "沒有在看東西，所以用了公開測速點（Cloudflare）。",
-        "Nothing was being watched, so a public endpoint (Cloudflare) was used.",
+        "测速点：Cloudflare 公开测速服务（离你最近的节点）。",
+        "測速點：Cloudflare 公開測速服務（離你最近的節點）。",
+        "Measured against Cloudflare's public speed test, at its nearest site.",
     ),
     "speed.cost": ("用掉 {megabytes} MB，花了 {seconds} 秒。",
                    "用掉 {megabytes} MB，花了 {seconds} 秒。",
@@ -1159,7 +1197,8 @@ STRINGS: dict[str, tuple[str, str, str]] = {
     "speed.marker": ("测速（延迟飙高是正常的）", "測速（延遲飆高是正常的）",
                      "speed test (the spike is this test)"),
     "speed.budget": ("测速时长（秒）", "測速時長（秒）", "Test for (seconds)"),
-    "speed.max_mb": ("最多下载（MB）", "最多下載（MB）", "Download at most (MB)"),
+    "speed.max_mb": ("最多用量（MB，上传用一半）", "最多用量（MB，上傳用一半）",
+                     "Data cap (MB; upload uses half)"),
     "speed.group": ("网速测试", "網速測試", "Speed test"),
     "speed.hint": (
         "两个上限哪个先到就停，所以千兆线路不会为了证明自己而拉掉一整 GB。",

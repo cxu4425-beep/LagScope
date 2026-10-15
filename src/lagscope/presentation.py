@@ -153,3 +153,27 @@ def tooltip(sample, status_text: str, stats=None, app_name: str = "") -> str:
         fields["speed"] = format_mbps(sample.throughput_mbps if sample else None)
         return tr("tray.tooltip_video", **fields).rstrip()
     return tr("tray.tooltip", **fields).rstrip()
+
+
+def speed_summary(report) -> str:
+    """A speed test as plain lines - the CLI prints it, the dialog shows it."""
+    from .probes.speed import tier_key
+
+    lines = [tr("speed.result", value=format_mbps(report.mbps))]
+    if report.upload is not None:
+        lines.append(tr("speed.result_up", value=format_mbps(report.up_mbps))
+                     if report.up_mbps is not None else tr("speed.up_failed"))
+    if report.idle_ms is not None:
+        lines.append(tr("speed.idle", value=format_ms(report.idle_ms)))
+    if report.grade:
+        lines.append(tr("speed.loaded", value=format_ms(report.idle_ms + report.bloat_ms),
+                        grade=report.grade))
+        lines.append(tr(f"speed.grade.{report.grade.replace('+', 'plus')}"))
+    lines += ["", tr(tier_key(report.mbps)), "",
+              tr("speed.source_stream") if report.source == "stream"
+              else tr("speed.source_public"),
+              tr("speed.cost", megabytes=f"{report.bytes / 1024 / 1024:.0f}",
+                 seconds=f"{report.seconds:.0f}")]
+    if not report.warmed:
+        lines.append(tr("speed.short"))
+    return "\n".join(lines)

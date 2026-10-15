@@ -207,7 +207,7 @@ class MonitorWorker(QObject):
         app marks the minutes it covers so that spike is not read later as a
         fault of the connection.
         """
-        from .probes.speed import measure_download, public_url
+        from .probes.speed import public_url, run_speed_test
 
         with self._lock:
             config = self._config
@@ -222,17 +222,21 @@ class MonitorWorker(QObject):
             # The menu item is available before the first probe cycle has run,
             # and while monitoring is stopped. Neither should crash the worker.
             self._client = HttpClient(timeout_s=config.probe.timeout_ms / 1000.0)
-        result = measure_download(self._client.session, url, budget_s=budget_s,
-                                  max_bytes=max_bytes, source=source)
-        if not result.ok and source == "stream":
-            # The CDN refused a long read; the public endpoint still answers
-            # the question, so say so rather than reporting a failure.
-            LOG.debug("speed test on the stream CDN failed (%s); using the public one",
-                      result.error)
-            result = measure_download(self._client.session, public_url(max_bytes),
-                                      budget_s=budget_s, max_bytes=max_bytes,
-                                      source="public")
-        self.speedTestReady.emit(result)
+        report = run_speed_test(
+            self._client.session, url, source=source, budget_s=budget_s,
+            max_bytes=max_bytes, ping=self._loaded_ping(),
+            # The CDN may refuse a long read; the public endpoint still answers
+            # the question, so use it rather than reporting a failure.
+            fallback_url=public_url(max_bytes) if source == "stream" else None,
+        )
+        self.speedTestReady.emit(report)
+
+    def _loaded_ping(self):
+        """A round trip to time beside the test: the nearest internet anchor."""
+        anchor = self._internet.anchor or self._internet.choose()
+        if anchor is None:
+            return None
+        return lambda: tcp_rtt_ms(anchor.host, anchor.port, 2.0)
 
     def _bulk_url(self) -> tuple:
         """Somewhere worth downloading from: what is being watched, ideally."""

@@ -358,34 +358,34 @@ def _diagnosis_host(config) -> str:
 
 
 def _speedtest(config) -> int:
-    """Measure the line flat out. No target is known here, so it uses the
-    public endpoint - the GUI prefers the CDN you are actually watching."""
+    """Measure the line flat out: down, up, and latency under load. No target
+    is known here, so it uses the public endpoint - the GUI prefers the CDN
+    you are actually watching."""
     from .i18n import tr
-    from .probes.network import HttpClient
-    from .probes.speed import measure_download, public_url, tier_key
-    from .ui.theme import format_mbps
+    from .probes.internet import InternetProbe
+    from .probes.network import HttpClient, tcp_rtt_ms
+    from .probes.speed import public_url, run_speed_test
 
     max_bytes = int(config.speed.max_mb) * 1024 * 1024
     print(tr("speed.running"), flush=True)
 
+    anchor = InternetProbe().choose()
+    ping = (lambda: tcp_rtt_ms(anchor.host, anchor.port, 2.0)) if anchor else None
     client = HttpClient(timeout_s=float(config.probe.timeout_ms) / 1000.0)
     try:
-        result = measure_download(client.session, public_url(max_bytes),
-                                  budget_s=float(config.speed.budget_s),
-                                  max_bytes=max_bytes, source="public")
+        report = run_speed_test(client.session, public_url(max_bytes),
+                                budget_s=float(config.speed.budget_s),
+                                max_bytes=max_bytes, ping=ping)
     finally:
         client.close()
 
-    if not result.ok:
-        print(f"{tr('speed.failed')}: {result.error}", file=sys.stderr)
+    if not report.ok:
+        print(f"{tr('speed.failed')}: {report.error}", file=sys.stderr)
         return 1
+    from .presentation import speed_summary
+
     print()
-    print(tr("speed.result", value=format_mbps(result.mbps)))
-    print(tr(tier_key(result.mbps)))
-    print(tr("speed.cost", megabytes=f"{result.bytes / 1024 / 1024:.0f}",
-             seconds=f"{result.seconds:.0f}"))
-    if not result.warmed:
-        print(tr("speed.short"))
+    print(speed_summary(report))
     return 0
 
 
